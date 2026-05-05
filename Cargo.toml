@@ -1,0 +1,50 @@
+[package]
+name = "xoa-proxy"
+version = "0.1.0"
+edition = "2021"
+description = "XOA Deploy Proxy — HTTPS+gunzip bridge for XAPI VM.import"
+
+[[bin]]
+name = "xoa-proxy"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# HTTP server
+axum = "0.7"
+
+# HTTP client — rustls only, no OpenSSL dep (critical for musl/XCP-ng static builds)
+reqwest = { version = "0.12", default-features = false, features = [
+    "stream",
+    "rustls-tls-webpki-roots",
+] }
+
+# Async gzip decompression (tokio-native, zero-copy pipeline)
+async-compression = { version = "0.4", features = ["tokio", "gzip"] }
+
+# Adapter: reqwest bytes_stream ↔ AsyncRead, AsyncRead ↔ Stream<Bytes>
+tokio-util = { version = "0.7", features = ["io"] }
+futures = "0.3"
+bytes = "1"
+
+# CLI argument parsing with automatic env-var override
+clap = { version = "4", features = ["derive", "env"] }
+
+# Deserialize for axum Query extractor in handler.rs
+serde = { version = "1", features = ["derive"] }
+
+# Structured logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Error handling
+anyhow = "1"
+
+[profile.release]
+# LTO + single codegen unit → smaller binary, important for Dom0 deployment
+opt-level = 3
+lto       = true
+codegen-units = 1
+strip     = true
