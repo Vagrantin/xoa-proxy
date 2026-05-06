@@ -1,8 +1,8 @@
 //! Axum route handlers.
 //!
 //! There are only two routes:
-//!   `GET /image.xva?src=<url>` — the proxy endpoint.
-//!   `*`                        — fallback 404.
+//!   `GET /image.xva?src=<url>[&verify_ssl=false]` — the proxy endpoint.
+//!   `*`                                            — fallback 404.
 
 use std::sync::Arc;
 
@@ -23,6 +23,16 @@ use crate::{error::ProxyError, state::AppState, stream::fetch_xva_stream};
 pub struct ImageParams {
     /// Upstream `.xva.gz` URL.  Must start with `https://`.
     src: Option<String>,
+
+    /// Whether to verify the upstream TLS certificate.
+    ///
+    /// Defaults to `true` (verification on).  Pass `verify_ssl=false` to skip
+    /// certificate checks — use only with self-signed / private-CA upstreams.
+    ///
+    /// Both reqwest clients (`client_verify` / `client_no_verify`) are built
+    /// once at startup; this parameter merely selects which one is used for
+    /// the current import.  No restart or config reload is required.
+    verify_ssl: Option<bool>,
 }
 
 // ── GET /image.xva ────────────────────────────────────────────────────────────
@@ -30,9 +40,10 @@ pub struct ImageParams {
 /// Main proxy handler.
 ///
 /// 1. Validates the `src` query parameter.
-/// 2. Acquires the single-import lock (409 if already held).
-/// 3. Fetches the upstream .xva.gz and wraps it in a decompression pipeline.
-/// 4. Returns a **streaming HTTP/1.0 200 OK** — see comment inside.
+/// 2. Selects the TLS client based on `verify_ssl` (default: `true`).
+/// 3. Acquires the single-import lock (409 if already held).
+/// 4. Fetches the upstream .xva.gz and wraps it in a decompression pipeline.
+/// 5. Returns a **streaming HTTP/1.0 200 OK** — see comment inside.
 ///
 /// The import lock is released only when axum finishes writing the body —
 /// `GuardedStream::drop` fires regardless of success or client disconnect.
@@ -52,6 +63,21 @@ pub async fn handle_image_xva(
         )));
     }
 
+    // ── TLS client selection ───────────────────────────────────────────────
+    // `verify_ssl` defaults to true; only opt-out is explicit `false`.
+    let ssl_verify = params.verify_ssl.unwrap_or(true);
+    let client = if ssl_verify {
+        &state.client_verify
+    } else {
+        &state.client_no_verify
+    };
+
+    info!(
+        src = %src_url,
+        ssl_verify,
+        "TLS client selected for import"
+    );
+
     // ── Import lock ────────────────────────────────────────────────────────
     // try_lock_owned() returns an OwnedMutexGuard (no lifetime tied to `state`)
     // so we can move it into the GuardedStream below.
@@ -62,7 +88,7 @@ pub async fn handle_image_xva(
     info!(src = %src_url, "Import lock acquired — starting stream");
 
     // ── Build the decompression pipeline ───────────────────────────────────
-    let stream = fetch_xva_stream(&state.client, &src_url, guard)
+    let stream = fetch_xva_stream(client, &src_url, guard)
         .await
         .map_err(|e| {
             error!(error = %e, src = %src_url, "Upstream fetch failed");

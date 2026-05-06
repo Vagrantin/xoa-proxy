@@ -8,11 +8,16 @@
 //!        → proxy fetches upstream (HTTPS), decompresses on-the-fly
 //!        → streams raw .xva back to XAPI over HTTP
 //!
+//! SSL verification is controlled **per-request** via the `verify_ssl` query
+//! parameter (default: `true`).  Both a verifying and a non-verifying
+//! reqwest client are constructed once at startup; the handler selects the
+//! appropriate one without any restart or config reload.
+//!
 //! # Module layout
 //! ```
 //! main.rs    — entry point, logging, router assembly, graceful shutdown
 //! config.rs  — CLI / env-var configuration (clap derive)
-//! state.rs   — shared AppState (config + HTTP client + import lock)
+//! state.rs   — shared AppState (two HTTP clients + import lock)
 //! stream.rs  — fetch+decompress pipeline; GuardedStream RAII type
 //! handler.rs — axum route handlers
 //! error.rs   — ProxyError → HTTP response mapping
@@ -62,18 +67,24 @@ async fn main() -> Result<()> {
     // ── Configuration ──────────────────────────────────────────────────────
     let config = Config::parse();
 
-    if !config.ssl_verification() {
-        tracing::warn!(
-            "SSL certificate verification DISABLED — \
-             use only with self-signed / private-CA upstreams"
-        );
-    }
-
     // ── Shared state ───────────────────────────────────────────────────────
-    let client = build_client(config.ssl_verification())?;
+    // Both clients are built eagerly at startup so there is no per-request
+    // allocation cost when switching TLS policy.  They share no connection
+    // pool — each has an independent pool, which is intentional: a caller
+    // that switches from verify=true to verify=false must not reuse a
+    // connection that was established under stricter settings.
+    let client_verify = build_client(true)
+        .context("Failed to build TLS-verifying HTTP client")?;
+    let client_no_verify = build_client(false)
+        .context("Failed to build TLS-non-verifying HTTP client")?;
+
+    info!(
+        "SSL clients ready — per-request selection via ?verify_ssl=<true|false> (default: true)"
+    );
 
     let state = Arc::new(AppState {
-        client,
+        client_verify,
+        client_no_verify,
         import_lock: Arc::new(Mutex::new(())),
     });
 
@@ -91,13 +102,11 @@ async fn main() -> Result<()> {
     let listener = tokio::net::TcpListener::bind(&addr).await?;
 
     info!(
-        "Listening on  http://{}/image.xva?src=<https://…xva.gz>   \
-         ssl_verification={}",
+        "Listening on  http://{}/image.xva?src=<https://…xva.gz>[&verify_ssl=true]",
         addr,
-        config.ssl_verification(),
     );
 
-    // ── Serve ─────────────────
+    // ── Serve ─────────────────────────────────────────────────────────────
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await?;

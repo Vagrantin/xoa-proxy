@@ -4,14 +4,20 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub struct AppState {
-    /// Pre-built HTTP client — connection pool is reused across requests.
-    /// Constructed once with the correct TLS settings (verify/skip).
-    pub client: reqwest::Client,
+    /// Pre-built HTTP client with TLS certificate verification **enabled**.
+    /// Used when the upstream URL is trusted (default).
+    pub client_verify: reqwest::Client,
+
+    /// Pre-built HTTP client with TLS certificate verification **disabled**.
+    /// Used when the caller passes `?verify_ssl=false`, e.g. for self-signed
+    /// or private-CA upstreams.  Both clients share no state — they each have
+    /// their own connection pool so the security boundary is never crossed.
+    pub client_no_verify: reqwest::Client,
 
     /// Non-reentrant import lock.
     ///
     /// At most one XVA stream may be active at a time: XAPI's `VM.import`
-    /// is not designed for concurrent uploads consumes significant CPU.
+    /// is not designed for concurrent image download.
     /// A second concurrent request receives HTTP 409 immediately via `try_lock`.
     ///
     /// Wrapped in `Arc` so we can obtain an `OwnedMutexGuard` that is

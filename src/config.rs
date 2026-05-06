@@ -28,12 +28,3 @@ pub struct Config {
     #[arg(long, env = "XOA_PROXY_BIND", default_value = "127.0.0.1")]
     pub bind: String,
 }
-
-impl Config {
-    /// `true`  → verify upstream TLS certificate (default).
-    /// `false` → skip verification (self-signed / private CA).
-    #[inline]
-    pub fn ssl_verification(&self) -> bool {
-        self.verify_ssl
-    }
-}
