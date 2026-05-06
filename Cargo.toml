@@ -41,6 +41,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 # Error handling
 anyhow = "1"
+url = "2.5.8"
 
 [profile.release]
 # LTO + single codegen unit → smaller binary, important for Dom0 deployment

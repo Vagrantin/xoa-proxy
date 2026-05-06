@@ -1,12 +1,24 @@
 //! Streaming fetch-and-decompress pipeline.
 //!
+//! Two modes are supported, selected by [`ImageFormat`]:
+//!
+//! **Gzip** (`.xva.gz` / `https` images):
 //! ```text
-//!  reqwest bytes_stream        (HTTPS, raw .gz bytes)
+//!  reqwest bytes_stream        (HTTP(S), raw .gz bytes)
 //!      ↓  StreamReader          (Stream<Bytes> → AsyncRead)
 //!      ↓  BufReader             (adds internal read buffer for the decoder)
 //!      ↓  GzipDecoder           (async on-the-fly decompression)
 //!      ↓  ReaderStream          (AsyncRead → Stream<Bytes>)
 //!      ↓  GuardedStream         (holds import lock until body is consumed)
+//!      →  axum Body::from_stream → TCP socket to XAPI
+//! ```
+//!
+//! **Raw** (plain `.xva` over `https` — HTTP plain-xva bypasses the proxy):
+//! ```text
+//!  reqwest bytes_stream        (HTTPS, raw .xva bytes)
+//!      ↓  StreamReader          (Stream<Bytes> → AsyncRead)
+//!      ↓  ReaderStream          (AsyncRead → Stream<Bytes>  — no decompression)
+//!      ↓  GuardedStream
 //!      →  axum Body::from_stream → TCP socket to XAPI
 //! ```
 //!
@@ -32,6 +44,42 @@ use tokio::io::BufReader;
 use tokio::sync::OwnedMutexGuard;
 use tokio_util::io::{ReaderStream, StreamReader};
 
+// ── Image format ──────────────────────────────────────────────────────────────
+
+/// Whether the upstream image is gzip-compressed or a plain XVA tar archive.
+///
+/// Detected once by the `/resolve` handler (extension → HEAD probe fallback)
+/// and forwarded to `/image.xva` as a `format=gzip|raw` query parameter, so
+/// the streaming handler never needs to inspect the body itself.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImageFormat {
+    /// `.xva.gz` — decompress with [`GzipDecoder`] before forwarding to XAPI.
+    Gzip,
+    /// `.xva` — stream raw bytes; XAPI receives a plain XVA tar directly.
+    Raw,
+}
+
+impl std::fmt::Display for ImageFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Gzip => write!(f, "gzip"),
+            Self::Raw => write!(f, "raw"),
+        }
+    }
+}
+
+impl std::str::FromStr for ImageFormat {
+    type Err = String;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "gzip" => Ok(Self::Gzip),
+            "raw" => Ok(Self::Raw),
+            other => Err(format!("Unknown image format '{other}': expected 'gzip' or 'raw'")),
+        }
+    }
+}
+
 /// Type-erased inner stream: `Stream<Item = io::Result<Bytes>>`.
 type InnerStream = Pin<Box<dyn Stream<Item = std::io::Result<Bytes>> + Send>>;
 
@@ -49,10 +97,12 @@ pub struct GuardedStream {
     inner: InnerStream,
     /// Released (lock freed) exactly when this stream is dropped.
     _guard: OwnedMutexGuard<()>,
-    /// Counts decompressed bytes handed to axum / XAPI.
+    /// Counts bytes handed to axum / XAPI (post-decompression for gzip).
     bytes_sent: Arc<AtomicU64>,
     /// Original upstream URL — carried into Drop for the completion log line.
     src_url: String,
+    /// Whether gzip decompression was applied.
+    format: ImageFormat,
 }
 
 impl Stream for GuardedStream {
@@ -68,12 +118,12 @@ impl Stream for GuardedStream {
 impl Drop for GuardedStream {
     fn drop(&mut self) {
         let bytes = self.bytes_sent.load(Ordering::Relaxed);
-        let _mib = bytes as f64 / (1024.0 * 1024.0);
         let gib = bytes.bytes_to_gib();
         tracing::info!(
-            src  = %self.src_url,
+            src    = %self.src_url,
+            format = %self.format,
             bytes_sent = bytes,
-            "Import of XVA finished — {} GiB transferred; import lock released",
+            "XVA stream finished — {:.2} GiB transferred; import lock released",
             gib,
         );
     }
@@ -89,6 +139,7 @@ impl BytesToGib for u64 {
         (gib * 100.0).trunc() / 100.0
     }
 }
+
 // ── Client builder ────────────────────────────────────────────────────────────
 
 /// Build the shared `reqwest::Client` according to TLS preferences.
@@ -114,8 +165,14 @@ pub fn build_client(ssl_verify: bool) -> Result<reqwest::Client> {
 
 // ── Stream factory ────────────────────────────────────────────────────────────
 
-/// Connects to `src_url`, wraps the response in a decompression pipeline,
-/// and returns a `GuardedStream` that owns the import lock for its lifetime.
+/// Connects to `src_url`, wraps the response in the appropriate pipeline for
+/// `format`, and returns a `GuardedStream` that owns the import lock for its
+/// lifetime.
+///
+/// | `format`          | pipeline                                      |
+/// |-------------------|-----------------------------------------------|
+/// | [`ImageFormat::Gzip`] | bytes → StreamReader → BufReader → GzipDecoder → ReaderStream |
+/// | [`ImageFormat::Raw`]  | bytes → StreamReader → ReaderStream (no decompression)         |
 ///
 /// The `guard` parameter is the `OwnedMutexGuard` obtained by the handler
 /// before calling this function.  Moving it here transfers ownership of
@@ -124,72 +181,74 @@ pub fn build_client(ssl_verify: bool) -> Result<reqwest::Client> {
 pub async fn fetch_xva_stream(
     client: &reqwest::Client,
     src_url: &str,
+    format: ImageFormat,
     guard: OwnedMutexGuard<()>,
 ) -> Result<GuardedStream> {
     let response = client
         .get(src_url)
         // Tell the upstream server NOT to apply an additional HTTP-level gzip
-        // layer on top of the already-.gz file content.
+        // layer on top of the already-.gz file content (or the raw .xva).
         .header(reqwest::header::ACCEPT_ENCODING, "identity")
         .send()
         .await
         .context("Failed to connect to upstream")?
         .error_for_status()
         .context("Upstream returned non-2xx status")?;
-    
-//    tracing::info!(
-//        status = response.status().as_u16(),
-//        content_length_in_Gb = response.content_length().unwrap().bytes_to_gib(),
-//        content_type = ?response.headers()
-//            .get(reqwest::header::CONTENT_TYPE)
-//            .and_then(|v| v.to_str().ok()).unwrap(),
-//        status,
-//        content_length_in_Gb,
-//        content_type,
-//    );
 
     tracing::info!(
-        "Upstream connected: status={}, Compressed XVA image size={} GiB, content_type={}",
+        "Upstream connected: status={}, Compressed XVA image size={} GiB, content_type={}, format={}",
         response.status().as_u16(),
         response.content_length().unwrap().bytes_to_gib(),
         response.headers().get(reqwest::header::CONTENT_TYPE).and_then(|v| v.to_str().ok()).unwrap(),
+        format,
     );
 
     // ── Pipeline assembly ──────────────────────────────────────────────────
-    // reqwest bytes_stream → StreamReader → BufReader → GzipDecoder → ReaderStream
-
     let byte_stream = response
         .bytes_stream()
         // Map reqwest errors into std::io::Error so StreamReader is happy
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e));
 
-    // 64 KiB internal buffer — matches Python CHUNK_SIZE; large enough to
-    // keep the GzipDecoder fed without excessive syscalls.
-    let gz = GzipDecoder::new(BufReader::with_capacity(64 * 1024, StreamReader::new(byte_stream)));
-
     // ── Byte counter ───────────────────────────────────────────────────────
     let counter = Arc::new(AtomicU64::new(0));
     let counter_clone = Arc::clone(&counter);
 
-    let counted_stream = ReaderStream::new(gz).map(move |result| {
-        match &result {
-            Ok(chunk) => {
-                counter_clone.fetch_add(chunk.len() as u64, Ordering::Relaxed);
-            }
-            Err(e) => {
-                // Log decompression / IO errors inline so they appear in the
-                // journal before the "Stream ended" drop message.
-                tracing::error!(error = %e, "Gzip decompression error — stream will terminate");
-            }
+    let inner: InnerStream = match format {
+        ImageFormat::Gzip => {
+            // 64 KiB internal buffer — keeps the GzipDecoder fed without excessive syscalls 
+            let gz = GzipDecoder::new(BufReader::with_capacity(
+                64 * 1024,
+                StreamReader::new(byte_stream),
+            ));
+            Box::pin(ReaderStream::new(gz).map(move |result| {
+                if let Ok(chunk) = &result {
+                    counter_clone.fetch_add(chunk.len() as u64, Ordering::Relaxed);
+                } else if let Err(e) = &result {
+                    tracing::error!(error = %e, "Gzip decompression error — stream will terminate");
+                }
+                result
+            }))
         }
-        result
-    });
+        ImageFormat::Raw => {
+            // Pass-through: no decompression layer.  StreamReader adapts the
+            // reqwest byte stream into AsyncRead; ReaderStream converts back.
+            let reader = StreamReader::new(byte_stream);
+            Box::pin(ReaderStream::new(reader).map(move |result| {
+                if let Ok(chunk) = &result {
+                    counter_clone.fetch_add(chunk.len() as u64, Ordering::Relaxed);
+                } else if let Err(e) = &result {
+                    tracing::error!(error = %e, "Raw stream read error — stream will terminate");
+                }
+                result
+            }))
+        }
+    };
 
     Ok(GuardedStream {
-        inner: Box::pin(counted_stream),
+        inner,
         _guard: guard,
         bytes_sent: counter,
         src_url: src_url.to_owned(),
+        format,
     })
 }
-

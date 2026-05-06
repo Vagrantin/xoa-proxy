@@ -17,8 +17,14 @@ pub enum ProxyError {
     NotFound(String),
     /// 409 — another XVA import is already streaming; only one is allowed.
     ImportInProgress,
-    /// 502 — upstream HTTPS fetch failed.
+    /// 502 — upstream HTTP(S) fetch failed.
     UpstreamFailed(String),
+    /// 502 — HEAD probe to detect image format failed.
+    ///
+    /// Raised by `/resolve` when the URL extension is ambiguous and the
+    /// fallback HEAD request cannot be completed (network error, server
+    /// returns 4xx/5xx, etc.).
+    ProbeFailed(String),
 }
 
 impl IntoResponse for ProxyError {
@@ -31,6 +37,10 @@ impl IntoResponse for ProxyError {
                 "An import is already in progress. Only one concurrent import is allowed.".into(),
             ),
             Self::UpstreamFailed(msg) => (StatusCode::BAD_GATEWAY, msg),
+            Self::ProbeFailed(msg) => (
+                StatusCode::BAD_GATEWAY,
+                format!("Format probe failed — could not determine image type: {msg}"),
+            ),
         };
 
         tracing::warn!(status = status.as_u16(), detail = %body, "HTTP error");
