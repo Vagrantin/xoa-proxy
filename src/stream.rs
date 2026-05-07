@@ -196,10 +196,18 @@ pub async fn fetch_xva_stream(
         .context("Upstream returned non-2xx status")?;
 
     tracing::info!(
-        "Upstream connected: status={}, Compressed XVA image size={} GiB, content_type={}, format={}",
+        "Upstream connected: status={}, content_length={} GiB, content_type={}, format={}",
         response.status().as_u16(),
-        response.content_length().unwrap().bytes_to_gib(),
-        response.headers().get(reqwest::header::CONTENT_TYPE).and_then(|v| v.to_str().ok()).unwrap(),
+        response
+            .content_length()
+            .map(|n| n.bytes_to_gib())
+            .map(|g| format!("{g:.2}"))
+            .unwrap_or_else(|| "unknown".into()),
+        response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("unknown"),
         format,
     );
 
@@ -215,7 +223,8 @@ pub async fn fetch_xva_stream(
 
     let inner: InnerStream = match format {
         ImageFormat::Gzip => {
-            // 64 KiB internal buffer — keeps the GzipDecoder fed without excessive syscalls 
+            // 64 KiB internal buffer — keeps the GzipDecoder fed without
+            // excessive syscalls while matching the Python CHUNK_SIZE.
             let gz = GzipDecoder::new(BufReader::with_capacity(
                 64 * 1024,
                 StreamReader::new(byte_stream),

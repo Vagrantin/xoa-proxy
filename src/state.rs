@@ -25,11 +25,4 @@ pub struct AppState {
     /// held for the *entire duration of the HTTP body transfer*, not just
     /// until the handler function returns.
     pub import_lock: Arc<Mutex<()>>,
-
-    /// `"host:port"` string of this proxy's own listening address.
-    ///
-    /// Used by `/resolve` to construct the proxy URL it returns to the Vue
-    /// frontend (e.g. `"127.0.0.1:9001"`).  Kept as a plain string to avoid
-    /// allocating on every resolve request.
-    pub proxy_base_addr: String,
 }
