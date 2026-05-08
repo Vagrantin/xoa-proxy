@@ -61,10 +61,8 @@ pub struct ImageParams {
 /// Strips query strings and fragments before checking, so URLs like
 /// `http://host/image.xva?token=abc` are handled correctly.
 fn detect_format_from_extension(src_url: &str) -> Option<ImageFormat> {
-    let path = src_url
-        .split('?').next().unwrap_or(src_url)
-        .split('#').next().unwrap_or(src_url)
-        .to_lowercase();
+    let parsed = reqwest::Url::parse(src_url).ok()?;
+    let path = parsed.path().to_lowercase();
 
     if path.ends_with(".xva.gz") || path.ends_with(".xva.gzip") {
         Some(ImageFormat::Gzip)
