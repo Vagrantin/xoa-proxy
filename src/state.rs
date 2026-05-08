@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+#[derive(Clone)]
 pub struct AppState {
     /// Pre-built HTTP client with TLS certificate verification **enabled**.
     /// Used when the upstream URL is trusted (default).

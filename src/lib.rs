@@ -4,9 +4,7 @@ pub mod handler;
 pub mod state;
 pub mod stream;
 
-use std::sync::Arc;
-
-pub fn build_router(state: Arc<state::AppState>) -> axum::Router {
+pub fn build_router(state: state::AppState) -> axum::Router {
     axum::Router::new()
         .route(
             "/image.xva",

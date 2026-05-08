@@ -150,7 +150,7 @@ async fn detect_format(
 /// The import lock is released only when axum finishes writing the body —
 /// `GuardedStream::drop` fires regardless of success or client disconnect.
 pub async fn handle_image_xva(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     Query(params): Query<ImageParams>,
 ) -> Result<axum::http::Response<Body>, ProxyError> {
     // ── Validate `src` ─────────────────────────────────────────────────────

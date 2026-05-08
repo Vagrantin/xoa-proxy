@@ -32,7 +32,6 @@ use std::sync::Arc;
 use std::fs::OpenOptions;
 
 use anyhow::{Context, Result};
-use clap::Parser;
 use tokio::sync::Mutex;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
@@ -67,7 +66,7 @@ async fn main() -> Result<()> {
         .init();
 
     // ── Configuration ──────────────────────────────────────────────────────
-    let config = Config::parse();
+    let config = Config::load();
 
     // ── Shared state ───────────────────────────────────────────────────────
     let client_verify = build_client(true)
@@ -79,11 +78,11 @@ async fn main() -> Result<()> {
         "SSL clients ready — per-request selection via ?verify_ssl=<true|false> (default: true)"
     );
 
-    let state = Arc::new(AppState {
+    let state = AppState {
         client_verify,
         client_no_verify,
         import_lock: Arc::new(Mutex::new(())),
-    });
+    };
 
     // ── Router ─────────────────────────────────────────────────────────────
     let app = build_router(state);

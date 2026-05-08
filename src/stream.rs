@@ -219,42 +219,29 @@ pub async fn fetch_xva_stream(
 
     // ── Byte counter ───────────────────────────────────────────────────────
     let counter = Arc::new(AtomicU64::new(0));
-    let counter_clone = Arc::clone(&counter);
-
     let inner: InnerStream = match format {
         ImageFormat::Gzip => {
-            // 64 KiB internal buffer — keeps the GzipDecoder fed without
-            // excessive syscalls while matching the Python CHUNK_SIZE.
-            let gz = GzipDecoder::new(BufReader::with_capacity(
-                64 * 1024,
-                StreamReader::new(byte_stream),
-            ));
-            Box::pin(ReaderStream::new(gz).map(move |result| {
-                if let Ok(chunk) = &result {
-                    counter_clone.fetch_add(chunk.len() as u64, Ordering::Relaxed);
-                } else if let Err(e) = &result {
-                    tracing::error!(error = %e, "Gzip decompression error — stream will terminate");
-                }
-                result
-            }))
+            let gz = GzipDecoder::new(BufReader::with_capacity( 64 * 1024, StreamReader::new(byte_stream)));
+            Box::pin(ReaderStream::new(gz))
         }
         ImageFormat::Raw => {
-            // Pass-through: no decompression layer.  StreamReader adapts the
-            // reqwest byte stream into AsyncRead; ReaderStream converts back.
             let reader = StreamReader::new(byte_stream);
-            Box::pin(ReaderStream::new(reader).map(move |result| {
-                if let Ok(chunk) = &result {
-                    counter_clone.fetch_add(chunk.len() as u64, Ordering::Relaxed);
-                } else if let Err(e) = &result {
-                    tracing::error!(error = %e, "Raw stream read error — stream will terminate");
-                }
-                result
-            }))
+            Box::pin(ReaderStream::new(reader))
         }
     };
 
+    let counter_clone = Arc::clone(&counter);
+    let counted_stream = inner.map(move |result| {
+        if let Ok(chunk) = &result {
+            counter_clone.fetch_add(chunk.len() as u64, Ordering::Relaxed);
+        } else if let Err(e) = &result {
+            tracing::error!(error = %e, " Strem read error — terminating");
+        }
+        result
+    });
+
     Ok(GuardedStream {
-        inner,
+        inner: Box::pin(counted_stream),
         _guard: guard,
         bytes_sent: counter,
         src_url: src_url.to_owned(),

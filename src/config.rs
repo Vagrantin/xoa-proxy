@@ -1,24 +1,28 @@
-//! Configuration — parsed once at startup from CLI flags and environment variables.
-//! Priority (highest to lowest): CLI flag → env var → compiled-in default.
+//! Configuration — parsed once at startup from environment variables if exist.
+//!
+//! Variables:
+//! - XOA_PROXY_PORT: TCP port to listen on (default: 9001)
+//! - XOA_PROXY_BIND: Address to bind to (default: 127.0.0.1)
 
-use clap::Parser;
+use std::env;
 
-#[derive(Parser, Debug, Clone)]
-#[command(
-    name = "xoa-proxy",
-    version,
-    after_help = "\
-Environment variables (override defaults; CLI flags take precedence):
-  XOA_PROXY_VERIFY_SSL=1      Enable (value = 1) / Disable (value = 0 ) SSL certificate verification (default: 1)"
-)]
+#[derive(Debug, Clone)]
 pub struct Config {
-    /// TCP port to listen on.
-    /// 9001 avoids clashes with Vite dev (3000) and XAPI (443/80).
-    #[arg(long, env = "XOA_PROXY_PORT", default_value_t = 9001)]
     pub port: u16,
-
-    /// Address to bind to. Loopback-only by default: XAPI is co-located,
-    /// so there is no reason to expose this to the network.
-    #[arg(long, env = "XOA_PROXY_BIND", default_value = "127.0.0.1")]
     pub bind: String,
+}
+
+impl Config {
+    /// Load configuration from environment variables.
+    pub fn load() -> Self {
+        let port = env::var("XOA_PROXY_PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(9001);
+
+        let bind = env::var("XOA_PROXY_BIND")
+            .unwrap_or_else(|_| "127.0.0.1".to_string());
+
+        Self { port, bind }
+    }
 }

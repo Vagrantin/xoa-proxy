@@ -61,16 +61,16 @@ fn fake_xva_gz_bytes() -> Bytes {
 }
 
 /// Build a test `AppState` with real HTTP clients and a fresh import lock.
-fn test_state() -> Arc<AppState> {
-    Arc::new(AppState {
+fn test_state() -> AppState {
+    AppState {
         client_verify: build_client(true).unwrap(),
         client_no_verify: build_client(false).unwrap(),
         import_lock: Arc::new(Mutex::new(())),
-    })
+    }
 }
 
 /// Fire a single GET request through the router without a TCP round-trip.
-async fn send(state: Arc<AppState>, uri: &str) -> axum::response::Response {
+async fn send(state: AppState, uri: &str) -> axum::response::Response {
     let app = build_router(state);
     let req = Request::builder()
         .method("GET")
@@ -465,7 +465,7 @@ async fn second_concurrent_import_returns_409() {
     let uri = format!("/image.xva?src={}/slow.xva", server.uri());
 
     // Spawn first request — it will hold the import lock for ~200 ms.
-    let state1 = Arc::clone(&state);
+    let state1 = state.clone();
     let uri1 = uri.clone();
     let first = tokio::spawn(async move { send(state1, &uri1).await });
 
@@ -473,7 +473,7 @@ async fn second_concurrent_import_returns_409() {
     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
     // Second request must be rejected immediately.
-    let resp2 = send(Arc::clone(&state), &uri).await;
+    let resp2 = send(state.clone(), &uri).await;
     assert_eq!(
         resp2.status(),
         StatusCode::CONFLICT,
@@ -499,12 +499,12 @@ async fn lock_released_after_first_import_completes() {
     let uri = format!("/image.xva?src={}/image.xva", server.uri());
 
     // First import — consume the full body to release the lock.
-    let resp1 = send(Arc::clone(&state), &uri).await;
+    let resp1 = send(state.clone(), &uri).await;
     assert_eq!(resp1.status(), StatusCode::OK);
     body_bytes(resp1).await; // drain body → GuardedStream::drop → lock released
 
     // Second import must succeed, not 409.
-    let resp2 = send(Arc::clone(&state), &uri).await;
+    let resp2 = send(state.clone(), &uri).await;
     assert_eq!(resp2.status(), StatusCode::OK);
 }
 

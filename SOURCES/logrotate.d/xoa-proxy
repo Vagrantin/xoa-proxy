@@ -1,0 +1,8 @@
+/var/log/xoa-proxy.log {
+    daily
+    rotate 7
+    compress
+    missingok
+    notifempty
+    copytruncate
+}
