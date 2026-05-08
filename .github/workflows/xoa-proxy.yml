@@ -31,7 +31,7 @@ jobs:
 
       - name: Build RPM
         run: rpmbuild -ba ~/rpmbuild/SPECS/xoa-proxy.spec
-
+          
       - name: Sign RPM
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
