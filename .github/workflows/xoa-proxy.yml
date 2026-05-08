@@ -12,7 +12,7 @@ jobs:
       - name: Install build dependencies
         run: |
           dnf install -y rpm-build rpm-sign pinentry
-          dnf groupinstall -y "Developement Tools"
+          dnf groupinstall -y "Development Tools"
           curl -O https://musl.libc.org/releases/musl-1.2.4.tar.gz
           tar -xf musl-1.2.4.tar.gz
           cd musl-1.2.4
