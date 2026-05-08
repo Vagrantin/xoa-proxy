@@ -4,16 +4,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: rockylinux:9
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-unknown-linux-musl
+      - name: Install build dependencies
+        run: |
+          dnf install -y rpm-build rpm-sign pinentry musl-gcc
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: Install dependencies
-        run: sudo apt-get install -y rpm musl-tools
+      - name: Add musl target
+        run: rustup target add x86_64-unknown-linux-musl
 
       - name: Build static binary
         run: cargo build --release --target x86_64-unknown-linux-musl
@@ -28,7 +31,7 @@ jobs:
 
       - name: Build RPM
         run: rpmbuild -ba ~/rpmbuild/SPECS/xoa-proxy.spec
-          
+
       - name: Sign RPM
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -38,7 +41,7 @@ jobs:
           %_gpg_name XCP-ng Community Edition
           %__gpg_sign_cmd %{__gpg} gpg --batch --yes --passphrase '' --pinentry-mode loopback -u "%{_gpg_name}" --detach-sign --armor -o %{__signature_filename} %{__plaintext_filename}
           EOF
-          rpmsign --addsign ~/rpmbuild/RPMS/x86_64/xoa-proxy-*.rpm 3<&0
+         rpmsign --addsign ~/rpmbuild/RPMS/x86_64/xoa-proxy-*.rpm 3<&0
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
