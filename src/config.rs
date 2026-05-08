@@ -12,12 +12,6 @@ Environment variables (override defaults; CLI flags take precedence):
   XOA_PROXY_VERIFY_SSL=1      Enable (value = 1) / Disable (value = 0 ) SSL certificate verification (default: 1)"
 )]
 pub struct Config {
-    /// Disable upstream TLS certificate verification.
-    /// Use when the XOA image is served behind a self-signed certificate.
-    /// Enable by default
-    #[arg(long, env = "XOA_PROXY_VERIFY_SSL", default_value_t = true)]
-    pub verify_ssl: bool,
-
     /// TCP port to listen on.
     /// 9001 avoids clashes with Vite dev (3000) and XAPI (443/80).
     #[arg(long, env = "XOA_PROXY_PORT", default_value_t = 9001)]
