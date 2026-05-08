@@ -1,0 +1,49 @@
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+
+      - name: Build static binary
+        run: cargo build --release --target x86_64-unknown-linux-musl
+
+      - name: Install rpmbuild
+        run: sudo apt-get install -y rpm
+
+      - name: Prepare RPM sources
+        run: |
+          mkdir -p ~/rpmbuild/{SOURCES,SPECS}
+          cp target/x86_64-unknown-linux-musl/release/xoa-proxy ~/rpmbuild/SOURCES/
+          cp packaging/xoa-proxy.service                        ~/rpmbuild/SOURCES/
+          cp packaging/xoa-proxy.logrotate                      ~/rpmbuild/SOURCES/
+          cp SPECS/xoa-proxy.spec                               ~/rpmbuild/SPECS/
+
+      - name: Build RPM
+        run: rpmbuild -ba ~/rpmbuild/SPECS/xoa-proxy.spec
+
+      - name: Sign RPM
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE:  ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          echo "%_gpg_name XCP-ng Community Edition" >> ~/.rpmmacros
+          echo "%__gpg_sign_cmd %{__gpg} gpg --batch --yes \
+            --passphrase-fd 3 --pinentry-mode loopback \
+            -u "%{_gpg_name}" --detach-sign --armor \
+            -o %{__signature_filename} %{__plaintext_filename}" >> ~/.rpmmacros
+          echo "$GPG_PASSPHRASE" | rpmsign --addsign \
+            ~/rpmbuild/RPMS/x86_64/xoa-proxy-*.rpm 3<&0
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: ~/rpmbuild/RPMS/x86_64/xoa-proxy-*.rpm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
