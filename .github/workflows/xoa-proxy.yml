@@ -32,15 +32,13 @@ jobs:
       - name: Sign RPM
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE:  ${{ secrets.GPG_PASSPHRASE }}
         run: |
           echo "$GPG_PRIVATE_KEY" | gpg --batch --import
           cat >> ~/.rpmmacros << 'EOF'
           %_gpg_name XCP-ng Community Edition
-          %__gpg_sign_cmd %{__gpg} gpg --batch --yes --passphrase-fd 3 --pinentry-mode loopback -u "%{_gpg_name}" --detach-sign --armor -o %{__signature_filename} %{__plaintext_filename}
+          %__gpg_sign_cmd %{__gpg} gpg --batch --yes --passphrase '' --pinentry-mode loopback -u "%{_gpg_name}" --detach-sign --armor -o %{__signature_filename} %{__plaintext_filename}
           EOF
-          echo "$GPG_PASSPHRASE" | rpmsign --addsign \
-            ~/rpmbuild/RPMS/x86_64/xoa-proxy-*.rpm 3<&0
+          rpmsign --addsign ~/rpmbuild/RPMS/x86_64/xoa-proxy-*.rpm 3<&0
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
