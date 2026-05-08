@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 description = "XOA Deploy Proxy — HTTPS+gunzip bridge for XAPI VM.import"
 
+[lib]
+name = "xoa_proxy_lib"
+path = "src/lib.rs"
+
 [[bin]]
 name = "xoa-proxy"
 path = "src/main.rs"
@@ -44,10 +48,10 @@ anyhow = "1"
 url = "2.5.8"
 
 [dev-dependencies]
-#wiremock       = "0.6"
-#flate2         = "1"
-#tower          = { version = "0.4", features = ["util"] }
-#tokio          = { version = "1",   features = ["full", "test-util"] }
+wiremock       = "0.6"
+flate2         = "1"
+tower          = { version = "0.4", features = ["util"] }
+tokio          = { version = "1",   features = ["full", "test-util"] }
 http           = "1"
 http-body-util = "0.1"
 

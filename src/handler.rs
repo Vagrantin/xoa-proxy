@@ -344,17 +344,13 @@ mod tests {
     #[test]
     fn tar_extension_returns_none() {
         assert_eq!(
-            detect_format_from_extension("http://host/image.tar"),
-            None
-        );
+            detect_format_from_extension("http://host/image.tar"), None);
     }
 
     #[test]
     fn tar_gz_returns_none() {
         assert_eq!(
-            detect_format_from_extension("http://host/image.tar.gz"),
-            None
-        );
+            detect_format_from_extension("http://host/image.tar.gz"), None);
     }
 
     #[test]
@@ -367,9 +363,6 @@ mod tests {
     #[test]
     fn xva_in_directory_name_does_not_match_gz() {
         // The file itself has no XVA extension; only the directory name does.
-        assert_eq!(
-            detect_format_from_extension("http://host/archive.xva/image.tar"),
-            None
-        );
+        assert_eq!(detect_format_from_extension("http://host/archive.xva/image.tar"), None);
     }
 }

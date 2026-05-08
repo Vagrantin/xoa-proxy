@@ -28,12 +28,6 @@
 //! error.rs   — ProxyError → HTTP response mapping
 //! ```
 
-mod config;
-mod error;
-mod handler;
-mod state;
-mod stream;
-
 use std::sync::Arc;
 use std::fs::OpenOptions;
 
@@ -43,9 +37,12 @@ use tokio::sync::Mutex;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
-use config::Config;
-use state::AppState;
-use stream::build_client;
+use xoa_proxy_lib::{
+    build_router,
+    config::Config,
+    state::AppState,
+    stream::build_client,
+};
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -89,13 +86,7 @@ async fn main() -> Result<()> {
     });
 
     // ── Router ─────────────────────────────────────────────────────────────
-    let app = axum::Router::new()
-        .route(
-            "/image.xva",
-            axum::routing::get(handler::handle_image_xva),
-        )
-        .fallback(handler::handle_not_found)
-        .with_state(state);
+    let app = build_router(state);
 
     // ── Listen ─────────────────────────────────────────────────────────────
     let addr = format!("{}:{}", config.bind, config.port);
