@@ -18,7 +18,7 @@ jobs:
           cd musl-1.2.4
           ./configure --prefix=/usr/local/musl
           make
-          sudo make install
+          make install
           echo "/usr/local/musl/bin" >> $GIHUB_PATH
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
