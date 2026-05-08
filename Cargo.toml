@@ -43,6 +43,14 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 anyhow = "1"
 url = "2.5.8"
 
+[dev-dependencies]
+#wiremock       = "0.6"
+#flate2         = "1"
+#tower          = { version = "0.4", features = ["util"] }
+#tokio          = { version = "1",   features = ["full", "test-util"] }
+http           = "1"
+http-body-util = "0.1"
+
 [profile.release]
 # LTO + single codegen unit → smaller binary, important for Dom0 deployment
 opt-level = 3

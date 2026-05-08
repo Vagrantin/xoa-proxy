@@ -47,3 +47,62 @@ impl IntoResponse for ProxyError {
         (status, body).into_response()
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::response::IntoResponse;
+    use http::StatusCode;
+
+    /// Helper: convert a ProxyError into a response and return just the status code.
+    fn status(e: ProxyError) -> StatusCode {
+        e.into_response().status()
+    }
+
+    #[test]
+    fn bad_request_is_400() {
+        assert_eq!(status(ProxyError::BadRequest("oops".into())), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn not_found_is_404() {
+        assert_eq!(status(ProxyError::NotFound("nope".into())), StatusCode::NOT_FOUND);
+    }
+
+    #[test]
+    fn import_in_progress_is_409() {
+        assert_eq!(status(ProxyError::ImportInProgress), StatusCode::CONFLICT);
+    }
+
+    #[test]
+    fn upstream_failed_is_502() {
+        assert_eq!(status(ProxyError::UpstreamFailed("net err".into())), StatusCode::BAD_GATEWAY);
+    }
+
+    #[test]
+    fn probe_failed_is_502() {
+        assert_eq!(status(ProxyError::ProbeFailed("timeout".into())), StatusCode::BAD_GATEWAY);
+    }
+
+    /// The body of ImportInProgress must mention the word "import" so callers
+    /// know why they were rejected.
+    #[tokio::test]
+    async fn import_in_progress_body_is_informative() {
+        use http_body_util::BodyExt;
+        let resp = ProxyError::ImportInProgress.into_response();
+        let bytes = resp.into_body().collect().await.unwrap().to_bytes();
+        let body = std::str::from_utf8(&bytes).unwrap().to_lowercase();
+        assert!(body.contains("import"), "expected 'import' in body: {body}");
+    }
+
+    /// The body of ProbeFailed must include the caller-supplied reason string.
+    #[tokio::test]
+    async fn probe_failed_body_contains_reason() {
+        use http_body_util::BodyExt;
+        let resp = ProxyError::ProbeFailed("DNS timeout".into()).into_response();
+        let bytes = resp.into_body().collect().await.unwrap().to_bytes();
+        let body = std::str::from_utf8(&bytes).unwrap();
+        assert!(body.contains("DNS timeout"), "expected reason in body: {body}");
+    }
+}

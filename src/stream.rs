@@ -261,3 +261,99 @@ pub async fn fetch_xva_stream(
         format,
     })
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── ImageFormat::from_str ─────────────────────────────────────────────
+
+    #[test]
+    fn parse_gzip_str() {
+        let f: ImageFormat = "gzip".parse().unwrap();
+        assert_eq!(f, ImageFormat::Gzip);
+    }
+
+    #[test]
+    fn parse_raw_str() {
+        let f: ImageFormat = "raw".parse().unwrap();
+        assert_eq!(f, ImageFormat::Raw);
+    }
+
+    #[test]
+    fn parse_unknown_is_err() {
+        let result: Result<ImageFormat, _> = "zstd".parse();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn parse_empty_is_err() {
+        let result: Result<ImageFormat, _> = "".parse();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn parse_is_case_sensitive() {
+        // "Gzip" must not parse — the enum only accepts lowercase literals.
+        let result: Result<ImageFormat, _> = "Gzip".parse();
+        assert!(result.is_err());
+    }
+
+    // ── ImageFormat Display ───────────────────────────────────────────────
+
+    #[test]
+    fn display_gzip() {
+        assert_eq!(ImageFormat::Gzip.to_string(), "gzip");
+    }
+
+    #[test]
+    fn display_raw() {
+        assert_eq!(ImageFormat::Raw.to_string(), "raw");
+    }
+
+    /// Round-trip: format!("{}", f).parse() must give back the same variant.
+    #[test]
+    fn display_roundtrips_gzip() {
+        let original = ImageFormat::Gzip;
+        let parsed: ImageFormat = original.to_string().parse().unwrap();
+        assert_eq!(parsed, original);
+    }
+
+    #[test]
+    fn display_roundtrips_raw() {
+        let original = ImageFormat::Raw;
+        let parsed: ImageFormat = original.to_string().parse().unwrap();
+        assert_eq!(parsed, original);
+    }
+
+    // ── BytesToGib ────────────────────────────────────────────────────────
+
+    #[test]
+    fn zero_bytes_is_zero_gib() {
+        assert_eq!(0u64.bytes_to_gib(), 0.0);
+    }
+
+    #[test]
+    fn one_gib_in_bytes() {
+        let one_gib: u64 = 1024 * 1024 * 1024;
+        // bytes_to_gib truncates to 2 decimal places, so exactly 1 GiB → 1.0.
+        assert_eq!(one_gib.bytes_to_gib(), 1.0);
+    }
+
+    #[test]
+    fn half_gib_truncated() {
+        let half_gib: u64 = 512 * 1024 * 1024;
+        assert_eq!(half_gib.bytes_to_gib(), 0.5);
+    }
+
+    /// Verify truncation (not rounding) at the second decimal place.
+    #[test]
+    fn truncation_not_rounding() {
+        // 1.999 GiB in bytes should truncate to 1.99, not round to 2.0.
+        let bytes: u64 = (1.999 * 1024.0 * 1024.0 * 1024.0) as u64;
+        let gib = bytes.bytes_to_gib();
+        assert!(gib < 2.0, "expected truncation; got {gib}");
+        assert!(gib >= 1.99, "expected at least 1.99; got {gib}");
+    }
+}

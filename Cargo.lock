@@ -1833,6 +1833,8 @@ dependencies = [
  "bytes",
  "clap",
  "futures",
+ "http",
+ "http-body-util",
  "reqwest",
  "serde",
  "tokio",

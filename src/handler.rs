@@ -240,3 +240,136 @@ pub async fn handle_not_found(uri: Uri) -> impl IntoResponse {
         uri.path()
     ))
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::stream::ImageFormat;
+
+    // ── detect_format_from_extension ──────────────────────────────────────
+
+    // --- positive: gzip variants ---
+
+    #[test]
+    fn xva_gz_is_gzip() {
+        assert_eq!(
+            detect_format_from_extension("http://host/image.xva.gz"),
+            Some(ImageFormat::Gzip)
+        );
+    }
+
+    #[test]
+    fn xva_gzip_is_gzip() {
+        assert_eq!(
+            detect_format_from_extension("http://host/image.xva.gzip"),
+            Some(ImageFormat::Gzip)
+        );
+    }
+
+    #[test]
+    fn uppercase_xva_gz_is_gzip() {
+        // Function lowercases before matching, so .XVA.GZ must still work.
+        assert_eq!(
+            detect_format_from_extension("http://host/IMAGE.XVA.GZ"),
+            Some(ImageFormat::Gzip)
+        );
+    }
+
+    #[test]
+    fn mixed_case_xva_gzip() {
+        assert_eq!(
+            detect_format_from_extension("http://host/image.XvA.GzIp"),
+            Some(ImageFormat::Gzip)
+        );
+    }
+
+    // --- positive: raw variants ---
+
+    #[test]
+    fn xva_is_raw() {
+        assert_eq!(
+            detect_format_from_extension("http://host/image.xva"),
+            Some(ImageFormat::Raw)
+        );
+    }
+
+    #[test]
+    fn uppercase_xva_is_raw() {
+        assert_eq!(
+            detect_format_from_extension("http://host/image.XVA"),
+            Some(ImageFormat::Raw)
+        );
+    }
+
+    // --- query strings and fragments are stripped before matching ---
+
+    #[test]
+    fn xva_with_query_string_is_raw() {
+        assert_eq!(
+            detect_format_from_extension("http://host/image.xva?token=abc&foo=bar"),
+            Some(ImageFormat::Raw)
+        );
+    }
+
+    #[test]
+    fn xva_gz_with_query_string_is_gzip() {
+        assert_eq!(
+            detect_format_from_extension("http://host/image.xva.gz?v=1"),
+            Some(ImageFormat::Gzip)
+        );
+    }
+
+    #[test]
+    fn xva_with_fragment_is_raw() {
+        assert_eq!(
+            detect_format_from_extension("http://host/image.xva#section"),
+            Some(ImageFormat::Raw)
+        );
+    }
+
+    // --- ambiguous / unknown extensions return None ---
+
+    #[test]
+    fn no_extension_returns_none() {
+        assert_eq!(detect_format_from_extension("http://host/image"), None);
+    }
+
+    #[test]
+    fn dot_gz_only_returns_none() {
+        // ".gz" without ".xva" prefix should NOT match.
+        assert_eq!(detect_format_from_extension("http://host/image.gz"), None);
+    }
+
+    #[test]
+    fn tar_extension_returns_none() {
+        assert_eq!(
+            detect_format_from_extension("http://host/image.tar"),
+            None
+        );
+    }
+
+    #[test]
+    fn tar_gz_returns_none() {
+        assert_eq!(
+            detect_format_from_extension("http://host/image.tar.gz"),
+            None
+        );
+    }
+
+    #[test]
+    fn empty_url_returns_none() {
+        assert_eq!(detect_format_from_extension(""), None);
+    }
+
+    // --- path components don't bleed into extension matching ---
+
+    #[test]
+    fn xva_in_directory_name_does_not_match_gz() {
+        // The file itself has no XVA extension; only the directory name does.
+        assert_eq!(
+            detect_format_from_extension("http://host/archive.xva/image.tar"),
+            None
+        );
+    }
+}
