@@ -19,7 +19,7 @@ jobs:
           ./configure --prefix=/usr/local/musl
           make
           make install
-          echo "/usr/local/musl/bin" >> $GIHUB_PATH
+          echo "/usr/local/musl/bin" >> $GITHUB_PATH
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
