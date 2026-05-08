@@ -12,6 +12,14 @@ jobs:
       - name: Install build dependencies
         run: |
           dnf install -y rpm-build rpm-sign pinentry musl-gcc
+          dnf groupinstall -y "Developement Tools"
+          curl -O https://musl.libc.org/releases/musl-1.2.4.tar.gz
+          tar -xf musl-1.2.4.tar.gz
+          cd musl-1.2.4
+          ./configure --prefix=/usr/local/musl
+          make
+          sudo make install
+          echo "/usr/local/musl/bin" >> $GIHUB_PATH
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
@@ -39,7 +47,7 @@ jobs:
           echo "$GPG_PRIVATE_KEY" | gpg --batch --import
           cat >> ~/.rpmmacros << 'EOF'
           %_gpg_name XCP-ng Community Edition
-          %__gpg_sign_cmd %{__gpg} gpg --batch --yes --passphrase '' --pinentry-mode loopback -u "%{_gpg_name}" --detach-sign --armor -o %{__signature_filename} %{__plaintext_filename}
+          %__gpg_sign_cmd %{__gpg} gpg --batch --yes --pinentry-mode loopback -u "%{_gpg_name}" --detach-sign --armor -o %{__signature_filename} %{__plaintext_filename}
           EOF
           rpmsign --addsign ~/rpmbuild/RPMS/x86_64/xoa-proxy-*.rpm
 
