@@ -29,6 +29,8 @@ install -D -m 644 %{SOURCE1} \
     %{buildroot}/usr/lib/systemd/system/xoa-proxy.service
 install -D -m 644 %{SOURCE2} \
     %{buildroot}/etc/logrotate.d/xoa-proxy
+install -D -m 644 %{SOURCE3} \
+    %{buildroot}/usr/lib/systemd/system-preset/83-xoa-proxy.preset
 
 %post
 %systemd_post xoa-proxy.service

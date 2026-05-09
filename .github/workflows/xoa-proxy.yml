@@ -37,6 +37,7 @@ jobs:
           cp target/x86_64-unknown-linux-musl/release/xoa-proxy ~/rpmbuild/SOURCES/
           cp packaging/xoa-proxy.service                        ~/rpmbuild/SOURCES/
           cp packaging/xoa-proxy.logrotate                      ~/rpmbuild/SOURCES/
+          cp packaging/83-xoa-proxy.preset                      ~/rpmbuild/SOURCES/
           cp SPECS/xoa-proxy.spec                               ~/rpmbuild/SPECS/
 
       - name: Build RPM
