@@ -5,6 +5,8 @@ Summary: Community XOA deployment proxy for XCP-ng
 License: GPLv3
 BuildArch: x86_64
 
+%define _binary_payload w2.xzdio
+
 Source0: xoa-proxy
 Source1: xoa-proxy.service
 Source2: xoa-proxy.logrotate
