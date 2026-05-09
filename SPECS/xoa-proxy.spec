@@ -10,6 +10,7 @@ BuildArch: x86_64
 Source0: xoa-proxy
 Source1: xoa-proxy.service
 Source2: xoa-proxy.logrotate
+Source3: 83-xoa-proxy.preset
 
 Requires: systemd
 
@@ -45,7 +46,11 @@ install -D -m 644 %{SOURCE3} \
 /opt/xensource/bin/xoa-proxy
 /usr/lib/systemd/system/xoa-proxy.service
 %config(noreplace) /etc/logrotate.d/xoa-proxy
+/usr/lib/systemd/system-preset/83-xoa-proxy.preset
+ 
 
 %changelog
+* Mon May 09 2026 Community Build <community@build> - 0.1.0-2
+Added systemd preset to automatically enable xoa-proxy service
 * Mon May 08 2026 Community Build <community@build> - 0.1.0-1
 - Initial community release
