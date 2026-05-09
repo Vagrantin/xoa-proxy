@@ -22,7 +22,8 @@ for arg in "$@"; do
   [[ "$arg" == "--app" ]] && DEPLOY_APP=true
 done
 
-XOLITE_DIR="$(cd "$(dirname "$0")/.." && pwd)"  # project root (one level up from xoa-proxy/)
+#XOLITE_DIR="$(cd "$(dirname "$0")/.." && pwd)"  # project root (one level up from xoa-proxy/)
+XOLITE_DIR="$HOME/devouille/xcp-ce/xen-orchestra/@xen-orchestra/lite"
 PROXY_BIN="$(dirname "$0")/xoa-proxy"
 SERVICE_FILE="$(dirname "$0")/xoa-proxy.service"
 LOG_ROTATE="$(dirname "$0")/logrotate.d/xoa-proxy"
