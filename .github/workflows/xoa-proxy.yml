@@ -46,12 +46,32 @@ jobs:
       - name: Sign RPM
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          # Import passphrase-protected key
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --pinentry-mode loopback \
+            --passphrase "$GPG_PASSPHRASE" --import
+
+          # Configure gpg-agent for non-TTY passphrase delivery
+          mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpgconf --kill gpg-agent
+          gpgconf --launch gpg-agent
+
+          # Pre-cache passphrase in agent — rpmsign will use it transparently
+          echo "$GPG_PASSPHRASE" | gpg --batch --pinentry-mode loopback \
+            --passphrase-fd 0 --quiet --no-tty \
+            -u "XCP-ng Community Edition" \
+            --sign --output /dev/null /dev/null
+
           cat >> ~/.rpmmacros << 'EOF'
           %_gpg_name XCP-ng Community Edition
-          %__gpg_sign_cmd %{__gpg} gpg --batch --no-verbose --no-armor --no-secmem-warning --pinentry-mode loopback -u "%{_gpg_name}" -sbo %{__signature_filename} --digest-algo sha256 %{__plaintext_filename}
+          %__gpg_sign_cmd %{__gpg} gpg --batch --no-verbose --no-armor \
+            --no-secmem-warning --pinentry-mode loopback \
+            -u "%{_gpg_name}" -sbo %{__signature_filename} \
+            --digest-algo sha256 %{__plaintext_filename}
           EOF
+
           rpmsign --addsign ~/rpmbuild/RPMS/x86_64/xoa-proxy-*.rpm
 
       - name: Publish GitHub Release
