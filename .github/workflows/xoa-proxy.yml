@@ -55,7 +55,9 @@ jobs:
           cp SPECS/xoa-proxy.spec                               ~/rpmbuild/SPECS/
 
       - name: Build RPM
-        run: rpmbuild -ba ~/rpmbuild/SPECS/xoa-proxy.spec
+        run: |
+          rpmbuild -ba ~/rpmbuild/SPECS/xoa-proxy.spec \
+            --define "pkg_version ${PKG_VERSION}"
           
       - name: Sign RPM
         env:
