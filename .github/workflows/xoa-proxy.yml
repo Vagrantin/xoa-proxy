@@ -7,8 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 'Emergency release'
+        description: 'Emergency release tag'
         required: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,11 +20,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Derive version from tag
+      - name: Derive version and release tag
+        id: derive-meta
         run: |
-          VERSION="${{ github.ref_name }}"
-          VERSION="${VERSION#v}"          # strip leading v → 1.2.0
-          echo "PKG_VERSION=${VERSION}" >> $GITHUB_ENV
+          # 1. Determine Git Release Tag Target
+          TAG="${{ github.ref_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ -n "${{ github.event.inputs.release_tag }}" ]; then
+              TAG="${{ github.event.inputs.release_tag }}"
+            else
+              TAG="v-proxy-automated-$(date +'%Y%m%d%H%M')-run${{ github.run_number }}"
+            fi
+          fi
+          echo "RELEASE_TAG=${TAG}" >> $GITHUB_ENV
+
+          # 2. Determine Safe RPM Package Version
+          CLEAN_VER="${TAG#v}"
+          if [[ ! "$CLEAN_VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            CARGO_VER=$(grep -m1 '^version *=' Cargo.toml | sed -E 's/version *= *"(.*)"/\1/')
+            CLEAN_VER="${CARGO_VER:-0.1.0}"
+          fi
+          echo "PKG_VERSION=${CLEAN_VER}" >> $GITHUB_ENV
+          
+          echo "▶ Target release tag: ${TAG}"
+          echo "▶ Computed RPM version: ${CLEAN_VER}"
 
       - name: Install build dependencies
         run: |
@@ -80,7 +100,8 @@ jobs:
             -u "XCP-ng Community Edition" \
             --sign --output /dev/null /dev/null
 
-          cat >> ~/.rpmmacros << 'EOF'
+          # Write cleanly instead of blindly appending
+          cat > ~/.rpmmacros << 'EOF'
           %_gpg_name XCP-ng Community Edition
           %__gpg_sign_cmd %{__gpg} gpg --batch --no-verbose --no-armor \
             --no-secmem-warning --pinentry-mode loopback \
@@ -93,7 +114,8 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
           files: ~/rpmbuild/RPMS/x86_64/xoa-proxy-*.rpm
+          draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
