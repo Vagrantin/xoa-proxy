@@ -29,7 +29,7 @@ jobs:
             if [ -n "${{ github.event.inputs.release_tag }}" ]; then
               TAG="${{ github.event.inputs.release_tag }}"
             else
-              TAG="v-proxy-automated-$(date +'%Y%m%d%H%M')-run${{ github.run_number }}"
+              TAG="Release-$(date +'%Y%m%d%H%M')-run${{ github.run_number }}"
             fi
           fi
           echo "RELEASE_TAG=${TAG}" >> $GITHUB_ENV
@@ -97,12 +97,12 @@ jobs:
           # Pre-cache passphrase in agent — rpmsign will use it transparently
           echo "$GPG_PASSPHRASE" | gpg --batch --pinentry-mode loopback \
             --passphrase-fd 0 --quiet --no-tty \
-            -u "XCP-ng Community Edition" \
+            -u "XCP-ng Home-Laber Edition" \
             --sign --output /dev/null /dev/null
 
           # Write cleanly instead of blindly appending
           cat > ~/.rpmmacros << 'EOF'
-          %_gpg_name XCP-ng Community Edition
+          %_gpg_name XCP-ng Home-Laber Edition
           %__gpg_sign_cmd %{__gpg} gpg --batch --no-verbose --no-armor \
             --no-secmem-warning --pinentry-mode loopback \
             -u "%{_gpg_name}" -sbo %{__signature_filename} \
@@ -116,6 +116,7 @@ jobs:
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: ~/rpmbuild/RPMS/x86_64/xoa-proxy-*.rpm
+          generate_release_notes: true
           draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
