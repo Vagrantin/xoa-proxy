@@ -97,12 +97,12 @@ jobs:
           # Pre-cache passphrase in agent — rpmsign will use it transparently
           echo "$GPG_PASSPHRASE" | gpg --batch --pinentry-mode loopback \
             --passphrase-fd 0 --quiet --no-tty \
-            -u "XCP-ng Home-Laber Edition" \
+            -u "XCP-ng Community Edition" \
             --sign --output /dev/null /dev/null
 
           # Write cleanly instead of blindly appending
           cat > ~/.rpmmacros << 'EOF'
-          %_gpg_name XCP-ng Home-Laber Edition
+          %_gpg_name XCP-ng Community Edition
           %__gpg_sign_cmd %{__gpg} gpg --batch --no-verbose --no-armor \
             --no-secmem-warning --pinentry-mode loopback \
             -u "%{_gpg_name}" -sbo %{__signature_filename} \
