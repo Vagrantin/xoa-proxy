@@ -1,0 +1,23 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - dependabot
+  categories:
+    - title: Features & Enhancements
+      labels:
+        - enhancement
+        - feature
+    - title: Bug Fixes
+      labels:
+        - bug
+        - fix
+    - title: Maintenance & Dependencies
+      labels:
+        - refactor
+        - dependencies
+        - chore
+    - title: Other Changes
+      labels:
+        - "*" # Catch-all for uncategorized commits

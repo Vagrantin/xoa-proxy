@@ -1,6 +1,6 @@
 Name:    xoa-proxy
 Version: %{pkg_version}
-Release: 1%{?dist}
+Release: 1.static
 Summary: Community XOA deployment proxy for XCP-ng
 License: GPLv3
 BuildArch: x86_64
