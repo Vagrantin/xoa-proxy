@@ -1,4 +1,5 @@
 name: Build and Sign XOA-proxy RPM
+run-name: "Build XOA-Proxy RPM (Tag: ${{ github.ref_name }}) [Static Musl]"
 
 on:
   push:
