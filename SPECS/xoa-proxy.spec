@@ -1,6 +1,10 @@
 Name:    xoa-proxy
 Version: %{pkg_version}
-Release: 1.static
+# _release and _shortcommit are passed via --define from CI: a monotonic
+# build counter (GitHub Actions run number) so every rebuild has a distinct,
+# upgradeable NEVRA, plus the source commit since Version alone carries no
+# provenance hint. ".static" documents the musl-static build variant.
+Release: %{_release}.g%{_shortcommit}.static
 Summary: Community XOA deployment proxy for XCP-ng
 License: GPLv3
 BuildArch: x86_64

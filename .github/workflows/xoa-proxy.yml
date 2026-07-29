@@ -78,7 +78,9 @@ jobs:
       - name: Build RPM
         run: |
           rpmbuild -ba ~/rpmbuild/SPECS/xoa-proxy.spec \
-            --define "pkg_version ${PKG_VERSION}"
+            --define "pkg_version ${PKG_VERSION}" \
+            --define "_release ${{ github.run_number }}" \
+            --define "_shortcommit ${GITHUB_SHA:0:7}"
           
       - name: Sign RPM
         env:
