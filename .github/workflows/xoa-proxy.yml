@@ -81,7 +81,22 @@ jobs:
             --define "pkg_version ${PKG_VERSION}" \
             --define "_release ${{ github.run_number }}" \
             --define "_shortcommit ${GITHUB_SHA:0:7}"
-          
+
+      # An undefined macro survives into the scriptlet as a literal line
+      # starting with '%', which the target shell then reads as a job spec
+      # ("fg: no job control") and fails. That shipped once already and was
+      # only caught on a live host, so check the built package here.
+      - name: Verify scriptlets contain no unexpanded macros
+        run: |
+          set -euo pipefail
+          rpm_file=$(ls ~/rpmbuild/RPMS/x86_64/xoa-proxy-*.rpm | head -1)
+          scripts=$(rpm -qp --scripts "${rpm_file}")
+          echo "${scripts}"
+          if printf '%s\n' "${scripts}" | grep -qE '^[[:space:]]*%'; then
+            echo "❌ unexpanded RPM macro in scriptlets"; exit 1
+          fi
+          echo "✅ scriptlets clean"
+
       - name: Sign RPM
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -97,7 +112,7 @@ jobs:
           gpgconf --kill gpg-agent
           gpgconf --launch gpg-agent
 
-          # Pre-cache passphrase in agent — rpmsign will use it transparently
+          # Pre-cache passphrase in agent, rpmsign will use it transparently
           echo "$GPG_PASSPHRASE" | gpg --batch --pinentry-mode loopback \
             --passphrase-fd 0 --quiet --no-tty \
             -u "XCP-ng Community Edition" \

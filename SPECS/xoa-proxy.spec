@@ -18,7 +18,7 @@ Requires: systemd
 Lightweight HTTP proxy that serves the community XVA image for XO Lite deployment.
 
 %prep
-# nothing to unpack — pre-built static binary
+# nothing to unpack, pre-built static binary
 
 %build
 # binary already compiled by CI
@@ -34,13 +34,31 @@ install -D -m 644 %{SOURCE3} \
     %{buildroot}/usr/lib/systemd/system-preset/83-xoa-proxy.preset
 
 %post
-%systemd_post xoa-proxy.service
+# Written out rather than using the %%systemd_* macros: this RPM is built in a
+# rockylinux:9 container but targets CentOS 7 dom0. The build image has no
+# systemd macros, so they were emitted literally and the shell read
+# "%%systemd_post" as a job spec ("fg: no job control"), failing every scriptlet
+# and stranding the old package in the rpmdb on upgrade. Installing the macros
+# would not help either: they describe the builder's systemd, not the target's.
+systemctl daemon-reload >/dev/null 2>&1 || :
+if [ $1 -eq 1 ] ; then
+    # Initial install: apply the shipped 83-xoa-proxy.preset.
+    systemctl preset xoa-proxy.service >/dev/null 2>&1 || :
+fi
 
 %preun
-%systemd_preun xoa-proxy.service
+if [ $1 -eq 0 ] ; then
+    # Real removal, not an upgrade.
+    systemctl --no-reload disable xoa-proxy.service >/dev/null 2>&1 || :
+    systemctl stop xoa-proxy.service >/dev/null 2>&1 || :
+fi
 
 %postun
-%systemd_postun_with_restart xoa-proxy.service
+systemctl daemon-reload >/dev/null 2>&1 || :
+if [ $1 -ge 1 ] ; then
+    # Upgrade, not uninstall: restart only if it was already running.
+    systemctl try-restart xoa-proxy.service >/dev/null 2>&1 || :
+fi
 
 %files
 /opt/xensource/bin/xoa-proxy
