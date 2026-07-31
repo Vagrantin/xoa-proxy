@@ -20,12 +20,12 @@
 //!
 //! # Module layout
 //! ```
-//! main.rs    — entry point, logging, router assembly, graceful shutdown
-//! config.rs  — CLI / env-var configuration (clap derive)
-//! state.rs   — shared AppState (two HTTP clients + import lock)
-//! stream.rs  — fetch pipeline; GuardedStream RAII type; ImageFormat enum
-//! handler.rs — axum route handlers (/image.xva, fallback)
-//! error.rs   — ProxyError → HTTP response mapping
+//! main.rs    : entry point, logging, router assembly, graceful shutdown
+//! config.rs  : CLI / env-var configuration (clap derive)
+//! state.rs   : shared AppState (two HTTP clients + import lock)
+//! stream.rs  : fetch pipeline; GuardedStream RAII type; ImageFormat enum
+//! handler.rs : axum route handlers (/image.xva, fallback)
+//! error.rs   : ProxyError → HTTP response mapping
 //! ```
 
 use std::sync::Arc;
