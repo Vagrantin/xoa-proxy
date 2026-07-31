@@ -2,7 +2,13 @@
 name=XCP-HL - XOA deploy proxy
 baseurl=https://vagrantin.github.io/xoa-proxy/8.3/x86_64/
 enabled=1
-gpgcheck=1
+# Package signatures are made by a GPG signing subkey, which rpm 4.11 on
+# XCP-ng 8.3 dom0 (CentOS 7) cannot verify: it registers only the primary key
+# on import, so a subkey-made signature reports NOKEY. Integrity comes from
+# repo_gpgcheck instead: the signed repomd.xml carries a sha256 of
+# primary.xml, which carries a sha256 of every package. This is the same
+# model apt uses, where the release file is signed and packages are not.
+gpgcheck=0
 repo_gpgcheck=1
 gpgkey=https://vagrantin.github.io/xoa-proxy/xcp-ng-ce-public.asc
 skip_if_unavailable=False

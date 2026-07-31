@@ -48,17 +48,25 @@ yum check-update xoa-proxy</code></pre>
 <h2>Update</h2>
 <pre><code>yum update xoa-proxy</code></pre>
 
-<p>All published versions are kept, so you can list the full history and pin or
-roll back to any of them:</p>
+<p>The five most recent releases are kept, so you can list what is available
+and roll back within that window:</p>
 <pre><code>yum --showduplicates list xoa-proxy
 yum downgrade xoa-proxy-&lt;version&gt;</code></pre>
 
 <h2>Verification</h2>
-<p>Packages are signed with the XCP-ng Community Edition RPM signing subkey, and
-the repository metadata (<code>repodata/repomd.xml</code>) carries a detached
-armored signature from the same key. Both checks are enabled by the
-<code>.repo</code> file above (<code>gpgcheck=1</code>,
-<code>repo_gpgcheck=1</code>).</p>
+<p>The repository metadata (<code>repodata/repomd.xml</code>) carries a detached
+armored signature from the XCP-ng Community Edition signing subkey, and
+<code>repo_gpgcheck=1</code> in the <code>.repo</code> file above verifies it on
+every run. Because the signed <code>repomd.xml</code> records a SHA-256 of
+<code>primary.xml</code>, which in turn records a SHA-256 of every package, that
+one signature covers the integrity of everything you download.</p>
+
+<p>Per-package signature checking is <strong>off</strong>
+(<code>gpgcheck=0</code>), and that is deliberate. The RPMs are signed by a GPG
+<em>signing subkey</em>, but <code>rpm</code> 4.11 on XCP-ng 8.3 dom0 (CentOS 7)
+registers only the primary key when importing, so it reports
+<code>NOKEY</code> for a subkey-made signature. This is the same trust model apt
+uses: the release file is signed, individual packages are not.</p>
 
 <p>Master key fingerprint:</p>
 <pre><code>2F59 1DB9 D2C1 28C4 C3D9  63F4 6DA0 0DCA 5BBA 215A</code></pre>

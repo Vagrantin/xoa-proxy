@@ -1,9 +1,10 @@
 name: Publish yum repo to GitHub Pages
 run-name: "Publish yum repo (${{ github.event_name }})"
 
-# Republishes every RPM this repo has ever released as a signed, yum-resolvable
-# repository at https://vagrantin.github.io/xoa-proxy/8.3/x86_64/ so an installed
-# XCP-HL host can `yum update xoa-proxy`.
+# Republishes the RPMs from the most recent releases (see KEEP_RELEASES) as a
+# signed, yum-resolvable repository at
+# https://vagrantin.github.io/xoa-proxy/8.3/x86_64/ so an installed XCP-HL host can
+# `yum update xoa-proxy`.
 #
 # workflow_run, not `release: published`, is what triggers this: the build
 # workflow publishes its release with the default GITHUB_TOKEN, and events
@@ -24,6 +25,12 @@ env:
   # trees should keep being published rather than moved.
   XCPNG_SERIES: "8.3"
   REPO_ARCH: "x86_64"
+  # Only the N most recent releases are republished. Keeping every release
+  # resurrected pre-pin builds whose Version outranks the current pinned one,
+  # so yum offered an abandoned build as an upgrade.
+  KEEP_RELEASES: "5"
+  # Also filters out legacy package names from before the rename.
+  PKG_GLOB: "xoa-proxy-*.rpm"
 
 jobs:
   build:
@@ -42,7 +49,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y createrepo-c
 
-      - name: Collect every published RPM
+      - name: Collect RPMs from recent releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -50,16 +57,16 @@ jobs:
           PKGDIR="_site/${XCPNG_SERIES}/${REPO_ARCH}"
           mkdir -p "${PKGDIR}"
 
-          gh release list --repo "${GITHUB_REPOSITORY}" --limit 200 \
+          gh release list --repo "${GITHUB_REPOSITORY}" --limit "${KEEP_RELEASES}" \
             --json tagName -q '.[].tagName' > tags.txt
-          echo "▶ $(wc -l < tags.txt) release(s) to scan"
+          echo "▶ $(wc -l < tags.txt) release(s) to scan (newest ${KEEP_RELEASES})"
 
           while read -r tag; do
             [ -n "${tag}" ] || continue
-            # --skip-existing: repeated dispatch builds of one commit can emit
-            # identical filenames, so a clash here is expected, not an error.
+            # --skip-existing: a release can be re-cut from the same commit and
+            # emit an identical filename, so a clash here is expected, not an error.
             gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" \
-              --pattern '*.rpm' --dir "${PKGDIR}" --skip-existing \
+              --pattern "${PKG_GLOB}" --dir "${PKGDIR}" --skip-existing \
               || echo "  (no RPM asset on ${tag})"
           done < tags.txt
 
