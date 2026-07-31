@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XCP-HL yum repository: xoa-proxy</title>
+<style>
+  body { max-width: 46rem; margin: 3rem auto; padding: 0 1.2rem;
+         font: 16px/1.6 system-ui, sans-serif; color: #1a1a1a; background: #fff; }
+  h1 { font-size: 1.6rem; margin-bottom: .2rem; }
+  .sub { color: #666; margin-top: 0; }
+  pre { background: #f4f4f4; padding: .8rem 1rem; border-radius: 6px;
+        overflow-x: auto; font-size: .9rem; }
+  code { font-family: ui-monospace, monospace; }
+  .note { border-left: 3px solid #d9a400; background: #fffbf0;
+          padding: .6rem 1rem; margin: 1.4rem 0; }
+  a { color: #0b62c4; }
+  footer { margin-top: 3rem; color: #777; font-size: .85rem; }
+  @media (prefers-color-scheme: dark) {
+    body { color: #e6e6e6; background: #16181c; }
+    .sub, footer { color: #9aa0a6; }
+    pre { background: #23262b; }
+    .note { background: #2a2419; border-left-color: #d9a400; }
+    a { color: #6fb3ff; }
+  }
+</style>
+</head>
+<body>
+
+<h1>XCP-HL yum repository: <code>xoa-proxy</code></h1>
+<p class="sub">Signed RPM repository for the XOA deploy proxy. Built for XCP-ng 8.3.</p>
+
+<p>This site serves a <code>yum</code>-resolvable repository containing every
+released build of the <code>xoa-proxy</code> package, so an installed XCP-HL host
+can update in place instead of reinstalling from the ISO. Upgrading restarts the
+<code>xoa-proxy</code> service automatically.</p>
+
+<h2>Add the repository</h2>
+<p>On an XCP-ng 8.3 host, as root:</p>
+<pre><code>curl -o /etc/yum.repos.d/xcp-hl-xoa-proxy.repo \
+  https://vagrantin.github.io/xoa-proxy/xcp-hl-xoa-proxy.repo
+
+rpm --import https://vagrantin.github.io/xoa-proxy/xcp-ng-ce-public.asc
+
+yum clean all
+yum check-update xoa-proxy</code></pre>
+
+<h2>Update</h2>
+<pre><code>yum update xoa-proxy</code></pre>
+
+<p>All published versions are kept, so you can list the full history and pin or
+roll back to any of them:</p>
+<pre><code>yum --showduplicates list xoa-proxy
+yum downgrade xoa-proxy-&lt;version&gt;</code></pre>
+
+<h2>Verification</h2>
+<p>Packages are signed with the XCP-ng Community Edition RPM signing subkey, and
+the repository metadata (<code>repodata/repomd.xml</code>) carries a detached
+armored signature from the same key. Both checks are enabled by the
+<code>.repo</code> file above (<code>gpgcheck=1</code>,
+<code>repo_gpgcheck=1</code>).</p>
+
+<p>Master key fingerprint:</p>
+<pre><code>2F59 1DB9 D2C1 28C4 C3D9  63F4 6DA0 0DCA 5BBA 215A</code></pre>
+
+<p>Also published at
+<a href="https://keys.openpgp.org/search?q=xcp-ng-ce.lid530%40passmail.com">keys.openpgp.org</a>.</p>
+
+<div class="note">
+  <strong>Signing subkeys expire 2027-05-10.</strong> After that date, signature
+  verification will fail until the subkeys are extended and
+  <code>xcp-ng-ce-public.asc</code> is refreshed here and re-imported on hosts.
+</div>
+
+<h2>Contents</h2>
+<ul>
+  <li><a href="8.3/x86_64/">8.3/x86_64/</a>: packages and <code>repodata/</code></li>
+  <li><a href="xcp-hl-xoa-proxy.repo">xcp-hl-xoa-proxy.repo</a>: ready-made client config</li>
+  <li><a href="xcp-ng-ce-public.asc">xcp-ng-ce-public.asc</a>: public signing key</li>
+</ul>
+
+<footer>
+  Community build, not supported by Vates.
+  Source: <a href="https://github.com/Vagrantin/xoa-proxy">Vagrantin/xoa-proxy</a> ·
+  Project docs: <a href="https://vagrantin.github.io/xcp-hl/">XCP-HL</a>
+</footer>
+
+</body>
+</html>

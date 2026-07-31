@@ -1,0 +1,156 @@
+name: Publish yum repo to GitHub Pages
+run-name: "Publish yum repo (${{ github.event_name }})"
+
+# Republishes every RPM this repo has ever released as a signed, yum-resolvable
+# repository at https://vagrantin.github.io/xoa-proxy/8.3/x86_64/ so an installed
+# XCP-HL host can `yum update xoa-proxy`.
+#
+# workflow_run, not `release: published`, is what triggers this: the build
+# workflow publishes its release with the default GITHUB_TOKEN, and events
+# authored by that token deliberately do not start further workflows.
+on:
+  workflow_run:
+    workflows: ["Build and Sign XOA-proxy RPM"]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  # XCP-ng series this repo targets. Bump when XCP-HL rebases onto a new
+  # release; the path is part of the baseurl every host carries, so old
+  # trees should keep being published rather than moved.
+  XCPNG_SERIES: "8.3"
+  REPO_ARCH: "x86_64"
+
+jobs:
+  build:
+    # workflow_run fires on every completion, failures included.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install createrepo_c
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y createrepo-c
+
+      - name: Collect every published RPM
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PKGDIR="_site/${XCPNG_SERIES}/${REPO_ARCH}"
+          mkdir -p "${PKGDIR}"
+
+          gh release list --repo "${GITHUB_REPOSITORY}" --limit 200 \
+            --json tagName -q '.[].tagName' > tags.txt
+          echo "▶ $(wc -l < tags.txt) release(s) to scan"
+
+          while read -r tag; do
+            [ -n "${tag}" ] || continue
+            # --skip-existing: repeated dispatch builds of one commit can emit
+            # identical filenames, so a clash here is expected, not an error.
+            gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" \
+              --pattern '*.rpm' --dir "${PKGDIR}" --skip-existing \
+              || echo "  (no RPM asset on ${tag})"
+          done < tags.txt
+
+          count=$(find "${PKGDIR}" -name '*.rpm' | wc -l)
+          echo "▶ collected ${count} RPM(s)"
+          [ "${count}" -gt 0 ] || { echo "❌ no RPMs collected"; exit 1; }
+          find "${PKGDIR}" -name '*.rpm' -printf '  %f\n' | sort
+
+      - name: Generate repository metadata
+        run: |
+          set -euo pipefail
+          PKGDIR="_site/${XCPNG_SERIES}/${REPO_ARCH}"
+
+          # XCP-ng 8.3 dom0 is CentOS 7 (yum 3.4.3 / rpm 4.11.3). That predates
+          # zstd and zchunk metadata and wants sqlite databases, none of which
+          # modern createrepo_c produces by default, so force all three.
+          ZCK_FLAG=""
+          if createrepo_c --help 2>&1 | grep -q -- '--no-zck'; then
+            ZCK_FLAG="--no-zck"
+          fi
+
+          createrepo_c \
+            --database \
+            --compress-type=gz \
+            --checksum=sha256 \
+            --retain-old-md=0 \
+            ${ZCK_FLAG} \
+            "${PKGDIR}"
+
+          echo "▶ generated metadata:"
+          ls -la "${PKGDIR}/repodata/"
+
+      - name: Sign repository metadata
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          REPOMD="_site/${XCPNG_SERIES}/${REPO_ARCH}/repodata/repomd.xml"
+
+          echo "${GPG_PRIVATE_KEY}" | gpg --batch --pinentry-mode loopback \
+            --passphrase "${GPG_PASSPHRASE}" --import
+
+          mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpgconf --kill gpg-agent
+          gpgconf --launch gpg-agent
+          sleep 1
+
+          gpg --batch --pinentry-mode loopback --passphrase "${GPG_PASSPHRASE}" \
+            --armor --detach-sign --digest-algo sha256 \
+            -u "XCP-ng Community Edition" \
+            --output "${REPOMD}.asc" "${REPOMD}"
+
+          gpg --verify "${REPOMD}.asc" "${REPOMD}"
+          echo "✅ repomd.xml signed"
+
+      - name: Assemble site
+        run: |
+          set -euo pipefail
+          cp pages/index.html      _site/
+          cp pages/*.repo          _site/
+          cp xcp-ng-ce-public.asc  _site/
+          touch _site/.nojekyll
+          echo "▶ site root:"
+          ls -la _site/
+
+      - name: Report published size
+        run: |
+          set -euo pipefail
+          mb=$(( $(du -sb _site | cut -f1) / 1024 / 1024 ))
+          echo "▶ site size: ${mb} MiB"
+          # GitHub Pages caps a published site at 1 GiB. Keeping every release is
+          # comfortable today but will be an issue later, checking the usage.
+          if [ "${mb}" -gt 800 ]; then
+            echo "::warning::_site is ${mb} MiB, approaching the 1 GiB Pages limit, consider pruning old RPMs"
+          fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

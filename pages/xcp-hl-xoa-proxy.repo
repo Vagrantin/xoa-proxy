@@ -1,0 +1,8 @@
+[xcp-hl-xoa-proxy]
+name=XCP-HL - XOA deploy proxy
+baseurl=https://vagrantin.github.io/xoa-proxy/8.3/x86_64/
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://vagrantin.github.io/xoa-proxy/xcp-ng-ce-public.asc
+skip_if_unavailable=False
