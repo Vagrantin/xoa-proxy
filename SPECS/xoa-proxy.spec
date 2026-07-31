@@ -38,8 +38,7 @@ install -D -m 644 %{SOURCE3} \
 # rockylinux:9 container but targets CentOS 7 dom0. The build image has no
 # systemd macros, so they were emitted literally and the shell read
 # "%%systemd_post" as a job spec ("fg: no job control"), failing every scriptlet
-# and stranding the old package in the rpmdb on upgrade. Installing the macros
-# would not help either: they describe the builder's systemd, not the target's.
+# and stranding the old package in the rpmdb on upgrade.
 systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -eq 1 ] ; then
     # Initial install: apply the shipped 83-xoa-proxy.preset.
