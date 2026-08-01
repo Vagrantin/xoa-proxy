@@ -38,3 +38,73 @@ cargo test
 ## Packaging
 
 Shipped as an RPM for XCP-ng 8.3 (`SPECS/xoa-proxy.spec`), with systemd unit, preset, and logrotate config under `packaging/`. It is a hard `Requires:` of the `xo-lite-ce` package (see `../xolite-ce`) and is built/released via the CI pipeline driven by `../buildorchestration`. `xcp-ng-ce-public.asc` is the community repo signing key.
+
+## RPM repository (GitHub Pages)
+
+Every release is republished as a signed, `yum`-resolvable repository hosted on
+GitHub Pages at <https://vagrantin.github.io/xoa-proxy/>, so an installed XCP-HL host
+can `yum update xoa-proxy` in place instead of reinstalling from the ISO.
+
+On an XCP-ng 8.3 host, as root:
+
+```bash
+curl -o /etc/yum.repos.d/xcp-hl-xoa-proxy.repo \
+  https://vagrantin.github.io/xoa-proxy/xcp-hl-xoa-proxy.repo
+
+rpm --import https://vagrantin.github.io/xoa-proxy/xcp-ng-ce-public.asc
+
+yum clean all
+yum update xoa-proxy
+```
+
+Note that `yum` never re-fetches a `.repo` file once it is installed, so a change
+to the repository configuration published here only reaches a host that
+downloads it again.
+
+### How it is built
+
+`.github/workflows/pages-repo.yml` builds and deploys the site. It is triggered by
+`workflow_run` once *Build and Sign XOA-proxy RPM* completes successfully, not by
+`release: published`: that workflow publishes its release with the default
+`GITHUB_TOKEN`, and events authored by that token deliberately do not start
+further workflows. It can also be run manually with `workflow_dispatch`, which is
+the only way to republish without cutting a release. The repository's Pages
+source must be set to *GitHub Actions*.
+
+The workflow downloads the `xoa-proxy-*.rpm` assets from the five most recent
+releases, indexes them with `createrepo_c`, and signs `repodata/repomd.xml` with
+a detached armored signature. The `createrepo_c` flags are not decorative:
+dom0 on XCP-ng 8.3 is CentOS 7 (yum 3.4.3, rpm 4.11.3), which predates zstd and
+zchunk metadata and expects sqlite databases, so `--database
+--compress-type=gz --checksum=sha256` are all required for the metadata to be
+readable at all.
+
+Only the five most recent releases are published, which bounds the site size and
+leaves a rollback window:
+
+```bash
+yum --showduplicates list xoa-proxy
+yum downgrade xoa-proxy-<version>
+```
+
+`pages/` holds the files copied to the site root: `index.html` (the landing page)
+and `xcp-hl-xoa-proxy.repo` (ready-made client config), published alongside
+`xcp-ng-ce-public.asc`.
+
+### Verification
+
+The client config sets `repo_gpgcheck=1` and `gpgcheck=0`. That asymmetry is
+deliberate: the RPMs are signed by a GPG *signing subkey*, and rpm 4.11 registers
+only the primary key on import, so it reports `NOKEY` for any subkey-made
+signature. Integrity therefore comes from the signed `repomd.xml`, which records
+a SHA-256 of `primary.xml`, which records a SHA-256 of every package. This is the
+same trust model apt uses, where the release file is signed and the individual
+packages are not.
+
+The signing subkeys expire **2027-05-10**. After that date verification fails
+until they are extended and `xcp-ng-ce-public.asc` is refreshed here and
+re-imported on every host.
+
+## Project entry point
+
+The entry point for the project is the [XCP-HL documentation website](https://vagrantin.github.io/xcp-hl/), and issues must be created on the [xcp-hl repository](https://github.com/Vagrantin/xcp-hl/issues) rather than on this one.
