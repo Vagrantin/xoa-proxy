@@ -45,35 +45,14 @@ Every release is republished as a signed, `yum`-resolvable repository hosted on
 GitHub Pages at <https://vagrantin.github.io/xoa-proxy/>, so an installed XCP-HL host
 can `yum update xoa-proxy` in place instead of reinstalling from the ISO.
 
-On an XCP-ng 8.3 host, as root:
-
-```bash
-curl -o /etc/yum.repos.d/xcp-hl-xoa-proxy.repo \
-  https://vagrantin.github.io/xoa-proxy/xcp-hl-xoa-proxy.repo
-
-rpm --import https://vagrantin.github.io/xoa-proxy/xcp-ng-ce-public.asc
-
-yum clean all
-yum update xoa-proxy
-```
-
-Note that `yum` never re-fetches a `.repo` file once it is installed, so a change
-to the repository configuration published here only reaches a host that
-downloads it again.
-
 ### How it is built
 
 `.github/workflows/pages-repo.yml` builds and deploys the site. It is triggered by
-`workflow_run` once *Build and Sign XOA-proxy RPM* completes successfully, not by
-`release: published`: that workflow publishes its release with the default
-`GITHUB_TOKEN`, and events authored by that token deliberately do not start
-further workflows. It can also be run manually with `workflow_dispatch`, which is
-the only way to republish without cutting a release. The repository's Pages
-source must be set to *GitHub Actions*.
+`workflow_run` once *Build and Sign XOA-proxy RPM* completes successfully.
 
 The workflow downloads the `xoa-proxy-*.rpm` assets from the five most recent
 releases, indexes them with `createrepo_c`, and signs `repodata/repomd.xml` with
-a detached armored signature. The `createrepo_c` flags are not decorative:
+a detached armored signature. The `createrepo_c` flags are necessary for
 dom0 on XCP-ng 8.3 is CentOS 7 (yum 3.4.3, rpm 4.11.3), which predates zstd and
 zchunk metadata and expects sqlite databases, so `--database
 --compress-type=gz --checksum=sha256` are all required for the metadata to be
