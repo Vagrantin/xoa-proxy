@@ -45,6 +45,24 @@ Every release is republished as a signed, `yum`-resolvable repository hosted on
 GitHub Pages at <https://vagrantin.github.io/xoa-proxy/>, so an installed XCP-HL host
 can `yum update xoa-proxy` in place instead of reinstalling from the ISO.
 
+### Recommended: install the whole repository set at once
+
+The instructions below configure this one repository. On an XCP-HL host the
+simpler route is the `xcp-hl-release` package, which owns
+`/etc/yum.repos.d/xcp-hl.repo` and defines all three XCP-HL repositories
+together, so repository configuration arrives through `yum` like any other
+update instead of having to be re-downloaded by hand:
+
+```bash
+curl -o /etc/yum.repos.d/xcp-hl.repo \
+  https://vagrantin.github.io/xcp-hl/xcp-hl.repo
+rpm --import https://vagrantin.github.io/xcp-hl/xcp-ng-ce-public.asc
+yum clean all && yum install xcp-hl-release
+```
+
+Hosts installed from a recent ISO already have it. See the
+[Updates documentation](https://vagrantin.github.io/xcp-hl/updates.html).
+
 ### How it is built
 
 `.github/workflows/pages-repo.yml` builds and deploys the site. It is triggered by
