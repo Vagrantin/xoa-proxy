@@ -53,15 +53,19 @@ simpler route is the `xcp-hl-release` package, which owns
 together, so repository configuration arrives through `yum` like any other
 update instead of having to be re-downloaded by hand:
 
+Hosts installed from a recent ISO already have it. See the
+[Updates documentation](https://vagrantin.github.io/xcp-hl/updates.html).
+
 ```bash
 curl -L -o /etc/yum.repos.d/xcp-hl.repo \
   https://vagrantin.github.io/xcp-hl/xcp-hl.repo
 rpm --import https://vagrantin.github.io/xcp-hl/xcp-ng-ce-public.asc
 yum clean all && yum install xcp-hl-release
+yum update xoa-proxy
 ```
 
-Hosts installed from a recent ISO already have it. See the
-[Updates documentation](https://vagrantin.github.io/xcp-hl/updates.html).
+Note that `yum` never re-fetches a `.repo` file once it is installed, so a change
+to the repository configuration is applied by updating xcp-hl-release RPM package.
 
 ### How it is built
 
