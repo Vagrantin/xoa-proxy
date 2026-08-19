@@ -35,6 +35,7 @@ use anyhow::{Context, Result};
 use tokio::sync::Mutex;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
+use tracing_subscriber::fmt::time::ChronoLocal;
 
 use xoa_proxy_lib::{
     build_router,
@@ -62,6 +63,8 @@ async fn main() -> Result<()> {
         )
         .with_target(false)
         .with_ansi(false)
+        // Local machine time instead of UTC, easier to correlate with events.
+        .with_timer(ChronoLocal::rfc_3339())
         .with_writer(std::sync::Mutex::new(log_file))
         .init();
 
