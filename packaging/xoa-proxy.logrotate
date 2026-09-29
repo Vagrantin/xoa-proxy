@@ -5,4 +5,9 @@
     missingok
     notifempty
     copytruncate
+
+    # Use dated rotated filenames and include the numeric timezone offset so
+    # archives are unambiguous on hosts whose local timezone is not UTC.
+    dateext
+    dateformat -%Y%m%d-%H%M%S%z
 }
