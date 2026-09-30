@@ -75,7 +75,9 @@ impl std::str::FromStr for ImageFormat {
         match s {
             "gzip" => Ok(Self::Gzip),
             "raw" => Ok(Self::Raw),
-            other => Err(format!("Unknown image format '{other}': expected 'gzip' or 'raw'")),
+            other => Err(format!(
+                "Unknown image format '{other}': expected 'gzip' or 'raw'"
+            )),
         }
     }
 }
@@ -158,9 +160,7 @@ pub fn build_client(ssl_verify: bool) -> Result<reqwest::Client> {
         .no_brotli()
         .danger_accept_invalid_certs(!ssl_verify); // rustls: disables cert + hostname check
 
-    builder
-        .build()
-        .context("Failed to build HTTP client")
+    builder.build().context("Failed to build HTTP client")
 }
 
 // ── Stream factory ────────────────────────────────────────────────────────────
@@ -215,13 +215,16 @@ pub async fn fetch_xva_stream(
     let byte_stream = response
         .bytes_stream()
         // Map reqwest errors into std::io::Error so StreamReader is happy
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e));
+        .map_err(std::io::Error::other);
 
     // ── Byte counter ───────────────────────────────────────────────────────
     let counter = Arc::new(AtomicU64::new(0));
     let inner: InnerStream = match format {
         ImageFormat::Gzip => {
-            let gz = GzipDecoder::new(BufReader::with_capacity( 64 * 1024, StreamReader::new(byte_stream)));
+            let gz = GzipDecoder::new(BufReader::with_capacity(
+                64 * 1024,
+                StreamReader::new(byte_stream),
+            ));
             Box::pin(ReaderStream::new(gz))
         }
         ImageFormat::Raw => {
@@ -248,7 +251,6 @@ pub async fn fetch_xva_stream(
         format,
     })
 }
-
 
 #[cfg(test)]
 mod tests {

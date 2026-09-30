@@ -48,7 +48,6 @@ impl IntoResponse for ProxyError {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,12 +61,18 @@ mod tests {
 
     #[test]
     fn bad_request_is_400() {
-        assert_eq!(status(ProxyError::BadRequest("oops".into())), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            status(ProxyError::BadRequest("oops".into())),
+            StatusCode::BAD_REQUEST
+        );
     }
 
     #[test]
     fn not_found_is_404() {
-        assert_eq!(status(ProxyError::NotFound("nope".into())), StatusCode::NOT_FOUND);
+        assert_eq!(
+            status(ProxyError::NotFound("nope".into())),
+            StatusCode::NOT_FOUND
+        );
     }
 
     #[test]
@@ -77,12 +82,18 @@ mod tests {
 
     #[test]
     fn upstream_failed_is_502() {
-        assert_eq!(status(ProxyError::UpstreamFailed("net err".into())), StatusCode::BAD_GATEWAY);
+        assert_eq!(
+            status(ProxyError::UpstreamFailed("net err".into())),
+            StatusCode::BAD_GATEWAY
+        );
     }
 
     #[test]
     fn probe_failed_is_502() {
-        assert_eq!(status(ProxyError::ProbeFailed("timeout".into())), StatusCode::BAD_GATEWAY);
+        assert_eq!(
+            status(ProxyError::ProbeFailed("timeout".into())),
+            StatusCode::BAD_GATEWAY
+        );
     }
 
     /// The body of ImportInProgress must mention the word "import" so callers
@@ -103,6 +114,9 @@ mod tests {
         let resp = ProxyError::ProbeFailed("DNS timeout".into()).into_response();
         let bytes = resp.into_body().collect().await.unwrap().to_bytes();
         let body = std::str::from_utf8(&bytes).unwrap();
-        assert!(body.contains("DNS timeout"), "expected reason in body: {body}");
+        assert!(
+            body.contains("DNS timeout"),
+            "expected reason in body: {body}"
+        );
     }
 }
