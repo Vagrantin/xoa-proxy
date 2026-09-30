@@ -20,8 +20,7 @@ impl Config {
             .and_then(|p| p.parse().ok())
             .unwrap_or(9001);
 
-        let bind = env::var("XOA_PROXY_BIND")
-            .unwrap_or_else(|_| "127.0.0.1".to_string());
+        let bind = env::var("XOA_PROXY_BIND").unwrap_or_else(|_| "127.0.0.1".to_string());
 
         Self { port, bind }
     }

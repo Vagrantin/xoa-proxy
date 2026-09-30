@@ -28,21 +28,16 @@
 //! error.rs   : ProxyError → HTTP response mapping
 //! ```
 
-use std::sync::Arc;
 use std::fs::OpenOptions;
+use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use tokio::sync::Mutex;
 use tracing::info;
-use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt::time::ChronoLocal;
+use tracing_subscriber::EnvFilter;
 
-use xoa_proxy_lib::{
-    build_router,
-    config::Config,
-    state::AppState,
-    stream::build_client,
-};
+use xoa_proxy_lib::{build_router, config::Config, state::AppState, stream::build_client};
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -57,9 +52,8 @@ async fn main() -> Result<()> {
 
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                EnvFilter::new("xoa_proxy=info,warn")
-            }),
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("xoa_proxy=info,warn")),
         )
         .with_target(false)
         .with_ansi(false)
@@ -72,14 +66,11 @@ async fn main() -> Result<()> {
     let config = Config::load();
 
     // ── Shared state ───────────────────────────────────────────────────────
-    let client_verify = build_client(true)
-        .context("Failed to build TLS-verifying HTTP client")?;
-    let client_no_verify = build_client(false)
-        .context("Failed to build TLS-non-verifying HTTP client")?;
+    let client_verify = build_client(true).context("Failed to build TLS-verifying HTTP client")?;
+    let client_no_verify =
+        build_client(false).context("Failed to build TLS-non-verifying HTTP client")?;
 
-    info!(
-        "SSL clients ready — per-request selection via ?verify_ssl=<true|false> (default: true)"
-    );
+    info!("SSL clients ready — per-request selection via ?verify_ssl=<true|false> (default: true)");
 
     let state = AppState {
         client_verify,

@@ -104,21 +104,13 @@ async fn empty_src_returns_400() {
 
 #[tokio::test]
 async fn ftp_scheme_returns_400() {
-    let resp = send(
-        test_state(),
-        "/image.xva?src=ftp://host/image.xva",
-    )
-    .await;
+    let resp = send(test_state(), "/image.xva?src=ftp://host/image.xva").await;
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }
 
 #[tokio::test]
 async fn file_scheme_returns_400() {
-    let resp = send(
-        test_state(),
-        "/image.xva?src=file:///etc/passwd",
-    )
-    .await;
+    let resp = send(test_state(), "/image.xva?src=file:///etc/passwd").await;
     assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 }
 
@@ -171,9 +163,7 @@ async fn raw_xva_response_is_http10() {
 
     Mock::given(method("GET"))
         .and(path("/image.xva"))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_bytes(fake_xva_bytes()),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(fake_xva_bytes()))
         .mount(&server)
         .await;
 
@@ -245,9 +235,7 @@ async fn gzip_response_is_http10() {
 
     Mock::given(method("GET"))
         .and(path("/image.xva.gz"))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_bytes(fake_xva_gz_bytes()),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(fake_xva_gz_bytes()))
         .mount(&server)
         .await;
 
@@ -265,9 +253,7 @@ async fn xva_gzip_extension_also_decompresses() {
 
     Mock::given(method("GET"))
         .and(path("/image.xva.gzip"))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_bytes(fake_xva_gz_bytes()),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(fake_xva_gz_bytes()))
         .mount(&server)
         .await;
 
@@ -290,19 +276,14 @@ async fn head_probe_detects_gzip_via_content_type() {
     // HEAD probe — proxy expects Content-Type: application/gzip
     Mock::given(method("HEAD"))
         .and(path("/image"))
-        .respond_with(
-            ResponseTemplate::new(200)
-                .insert_header("Content-Type", "application/gzip"),
-        )
+        .respond_with(ResponseTemplate::new(200).insert_header("Content-Type", "application/gzip"))
         .mount(&server)
         .await;
 
     // GET — proxy has now determined format=gzip and will decompress
     Mock::given(method("GET"))
         .and(path("/image"))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_bytes(fake_xva_gz_bytes()),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(fake_xva_gz_bytes()))
         .mount(&server)
         .await;
 
@@ -325,8 +306,7 @@ async fn head_probe_detects_raw_via_content_type() {
     Mock::given(method("HEAD"))
         .and(path("/image"))
         .respond_with(
-            ResponseTemplate::new(200)
-                .insert_header("Content-Type", "application/octet-stream"),
+            ResponseTemplate::new(200).insert_header("Content-Type", "application/octet-stream"),
         )
         .mount(&server)
         .await;
@@ -366,9 +346,7 @@ async fn head_probe_detects_gzip_via_content_encoding() {
 
     Mock::given(method("GET"))
         .and(path("/image"))
-        .respond_with(
-            ResponseTemplate::new(200).set_body_bytes(fake_xva_gz_bytes()),
-        )
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(fake_xva_gz_bytes()))
         .mount(&server)
         .await;
 
