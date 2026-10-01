@@ -136,5 +136,7 @@ jobs:
           files: ~/rpmbuild/RPMS/x86_64/xoa-proxy-*.rpm
           generate_release_notes: true
           draft: false
+          # Every build is a candidate: stable only serves promoted versions (xcp-hl#154).
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

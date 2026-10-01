@@ -1,0 +1,10 @@
+[xcp-hl-xoa-proxy-testing]
+name=XCP-HL - XOA deploy proxy (testing: candidates before QA approval)
+baseurl=https://vagrantin.github.io/xoa-proxy/testing/8.3/x86_64/
+# Off by default: enable it per command (yum --enablerepo=xcp-hl-xoa-proxy-testing)
+# on a disposable host. Stable only ever serves promoted versions.
+enabled=0
+gpgcheck=0
+repo_gpgcheck=1
+gpgkey=https://vagrantin.github.io/xoa-proxy/xcp-ng-ce-public.asc
+skip_if_unavailable=False

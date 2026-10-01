@@ -1,10 +1,10 @@
 name: Publish yum repo to GitHub Pages
-run-name: "Publish yum repo (${{ github.event_name }})"
+run-name: "Publish yum repo (${{ github.event_name }}${{ inputs.promotion_id && format(' {0}', inputs.promotion_id) || '' }})"
 
-# Republishes the RPMs from the most recent releases (see KEEP_RELEASES) as a
-# signed, yum-resolvable repository at
-# https://vagrantin.github.io/xoa-proxy/8.3/x86_64/ so an installed XCP-HL host can
-# `yum update xoa-proxy`.
+# Publishes two signed, yum-resolvable channels (xcp-hl#154):
+#   stable  https://vagrantin.github.io/xoa-proxy/8.3/x86_64/          exactly stable.json (promotions branch)
+#   testing https://vagrantin.github.io/xoa-proxy/testing/8.3/x86_64/  the newest candidates (pre-releases)
+# Installed hosts keep the stable URL; the testing .repo is disabled by default.
 #
 # workflow_run, not `release: published`, is what triggers this: the build
 # workflow publishes its release with the default GITHUB_TOKEN, and events
@@ -14,6 +14,11 @@ on:
     workflows: ["Build and Sign XOA-proxy RPM"]
     types: [completed]
   workflow_dispatch:
+    inputs:
+      promotion_id:
+        description: 'Set by prod/promote so it can wait for this exact run'
+        required: false
+        default: ''
 
 concurrency:
   group: "pages"
@@ -25,12 +30,10 @@ env:
   # trees should keep being published rather than moved.
   XCPNG_SERIES: "8.3"
   REPO_ARCH: "x86_64"
-  # Only the N most recent releases are republished. Keeping every release
-  # resurrected pre-pin builds whose Version outranks the current pinned one,
-  # so yum offered an abandoned build as an upgrade.
-  KEEP_RELEASES: "5"
-  # Also filters out legacy package names from before the rename.
-  PKG_GLOB: "xoa-proxy-*.rpm"
+  # Testing serves the N newest candidates (pre-releases). Stable serves only
+  # what stable.json lists, so an abandoned higher build can never resurface
+  # there as an upgrade.
+  KEEP_CANDIDATES: "5"
 
 jobs:
   build:
@@ -49,55 +52,23 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y createrepo-c
 
-      - name: Collect RPMs from recent releases
+      # The stable channel is exactly stable.json on the promotions branch, read when this run starts,
+      # so a queued run never publishes an older set (jenkins-infra docs/promotion-gate.md, xcp-hl#154).
+      - name: Read the promotion record
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin promotions
+          echo "PROMOTIONS_COMMIT=$(git rev-parse FETCH_HEAD)" >> "$GITHUB_ENV"
+          git show FETCH_HEAD:stable.json > stable.json
+          jq -c '{generation, latest, entries: [.entries[] | {tag, status}]}' stable.json
+
+      - name: Build stable and testing trees
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          PKGDIR="_site/${XCPNG_SERIES}/${REPO_ARCH}"
-          mkdir -p "${PKGDIR}"
-
-          gh release list --repo "${GITHUB_REPOSITORY}" --limit "${KEEP_RELEASES}" \
-            --json tagName -q '.[].tagName' > tags.txt
-          echo "▶ $(wc -l < tags.txt) release(s) to scan (newest ${KEEP_RELEASES})"
-
-          while read -r tag; do
-            [ -n "${tag}" ] || continue
-            # --skip-existing: a release can be re-cut from the same commit and
-            # emit an identical filename, so a clash here is expected, not an error.
-            gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" \
-              --pattern "${PKG_GLOB}" --dir "${PKGDIR}" --skip-existing \
-              || echo "  (no RPM asset on ${tag})"
-          done < tags.txt
-
-          count=$(find "${PKGDIR}" -name '*.rpm' | wc -l)
-          echo "▶ collected ${count} RPM(s)"
-          [ "${count}" -gt 0 ] || { echo "❌ no RPMs collected"; exit 1; }
-          find "${PKGDIR}" -name '*.rpm' -printf '  %f\n' | sort
-
-      - name: Generate repository metadata
-        run: |
-          set -euo pipefail
-          PKGDIR="_site/${XCPNG_SERIES}/${REPO_ARCH}"
-
-          # XCP-ng 8.3 dom0 is CentOS 7 (yum 3.4.3 / rpm 4.11.3). That predates
-          # zstd and zchunk metadata and wants sqlite databases, none of which
-          # modern createrepo_c produces by default, so force all three.
-          ZCK_FLAG=""
-          if createrepo_c --help 2>&1 | grep -q -- '--no-zck'; then
-            ZCK_FLAG="--no-zck"
-          fi
-
-          createrepo_c \
-            --database \
-            --compress-type=gz \
-            --checksum=sha256 \
-            --retain-old-md=0 \
-            ${ZCK_FLAG} \
-            "${PKGDIR}"
-
-          echo "▶ generated metadata:"
-          ls -la "${PKGDIR}/repodata/"
+          REPO: ${{ github.repository }}
+          STABLE_JSON: stable.json
+          PKG_GLOB_RE: '^xoa-proxy-.*\.rpm$'
+        run: bash pages/build-site.sh
 
       - name: Sign repository metadata
         env:
@@ -105,8 +76,6 @@ jobs:
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           set -euo pipefail
-          REPOMD="_site/${XCPNG_SERIES}/${REPO_ARCH}/repodata/repomd.xml"
-
           echo "${GPG_PRIVATE_KEY}" | gpg --batch --pinentry-mode loopback \
             --passphrase "${GPG_PASSPHRASE}" --import
 
@@ -116,13 +85,16 @@ jobs:
           gpgconf --launch gpg-agent
           sleep 1
 
-          gpg --batch --pinentry-mode loopback --passphrase "${GPG_PASSPHRASE}" \
-            --armor --detach-sign --digest-algo sha256 \
-            -u "XCP-ng Community Edition" \
-            --output "${REPOMD}.asc" "${REPOMD}"
-
-          gpg --verify "${REPOMD}.asc" "${REPOMD}"
-          echo "✅ repomd.xml signed"
+          # Each channel has its own signed metadata.
+          for REPOMD in "_site/${XCPNG_SERIES}/${REPO_ARCH}/repodata/repomd.xml" \
+                        "_site/testing/${XCPNG_SERIES}/${REPO_ARCH}/repodata/repomd.xml"; do
+            gpg --batch --pinentry-mode loopback --passphrase "${GPG_PASSPHRASE}" \
+              --armor --detach-sign --digest-algo sha256 \
+              -u "XCP-ng Community Edition" \
+              --output "${REPOMD}.asc" "${REPOMD}"
+            gpg --verify "${REPOMD}.asc" "${REPOMD}"
+          done
+          echo "stable and testing repomd.xml signed"
 
       - name: Assemble site
         run: |

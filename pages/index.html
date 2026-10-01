@@ -35,6 +35,13 @@ released build of the <code>xoa-proxy</code> package, so an installed XCP-HL hos
 can update in place instead of reinstalling from the ISO. Upgrading restarts the
 <code>xoa-proxy</code> service automatically.</p>
 
+<div class="note"><strong>Stable and testing.</strong> This URL is the <em>stable</em>
+channel: only versions that passed QA and were approved (and the versions already
+offered before that gate existed). New builds go first to the <em>testing</em> channel,
+<code>https://vagrantin.github.io/xoa-proxy/testing/8.3/x86_64/</code>
+(<a href="xcp-hl-xoa-proxy-testing.repo">xcp-hl-xoa-proxy-testing.repo</a>, disabled by default),
+meant for disposable test hosts.</div>
+
 <h2>Add the repository</h2>
 <p>On an XCP-ng 8.3 host, as root:</p>
 <pre><code>curl -o /etc/yum.repos.d/xcp-hl-xoa-proxy.repo \
