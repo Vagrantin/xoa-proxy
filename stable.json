@@ -1,9 +1,48 @@
 {
   "stream": "xoa-proxy",
-  "generation": 1,
-  "latest": "v0.1.2.1",
-  "updated_at": "2026-10-01T00:00:00Z",
+  "generation": 2,
+  "latest": "v0.1.2.2",
+  "updated_at": "2026-10-01T09:17:12Z",
   "entries": [
+    {
+      "tag": "v0.1.2.2",
+      "release_id": 400644188,
+      "commit": "f6c6b3cd1839be1dde06c4f79ccc9ef73bb94d60",
+      "assets": [
+        {
+          "name": "xoa-proxy-0.1.2.2-66.gf6c6b3c.static.x86_64.rpm",
+          "sha256": "b8ed8ec1ac47ebc72babc53f59c4860ae51210581ffc4b2a4632d4efd6058ee3",
+          "nevra": "xoa-proxy-0.1.2.2-66.gf6c6b3c.static.x86_64"
+        }
+      ],
+      "basis": "promoted",
+      "status": "stable",
+      "qa": {
+        "record_sha256": "7d10dab876e1ebe3b8041d53c78b2588c7a5bfccf926bdb9db28bbf64c9bf763",
+        "attempt": 0,
+        "passed_at": "2026-10-01T04:55:00Z",
+        "policy_sha256": "141e95c3f0a5c26abd3daa511ff7fc546c76d74c866645b02d3970edce99e168",
+        "coverage": {
+          "iso": "v8.3-ce42",
+          "iso_attempt": 1,
+          "at": "2026-10-01T04:55:00Z",
+          "nevra": "xoa-proxy-0.1.2.2-66.gf6c6b3c.static.x86_64",
+          "sigmd5": "bc226362a0776f10a809a8a2ef6a4c56",
+          "sha1header": "38c1ba7e6ff18b3ad8c9c7bbeb9243667e8f8f3d",
+          "rpm_verify": "clean",
+          "compatible_set": [
+            "xo-lite-ce-0.21.0-27.g4e319cd.xcpng8.3.noarch",
+            "xoa-proxy-0.1.2.2-66.gf6c6b3c.static.x86_64",
+            "xcp-hl-release-0.0.4-4.gce1c74a.xcpng8.3.noarch"
+          ]
+        }
+      },
+      "approval": {
+        "by": "admin",
+        "at": "2026-10-01T09:17:12Z",
+        "proposal_sha256": "13e3d2da6736647a1cbbf96ef614f5ce8b6000e2fc5022e87e110185f8a5cdfa"
+      }
+    },
     {
       "assets": [
         {
