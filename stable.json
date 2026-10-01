@@ -1,0 +1,83 @@
+{
+  "stream": "xoa-proxy",
+  "generation": 1,
+  "latest": "v0.1.2.1",
+  "updated_at": "2026-10-01T00:00:00Z",
+  "entries": [
+    {
+      "assets": [
+        {
+          "name": "xoa-proxy-0.1.2.1-65.g510e2bb.static.x86_64.rpm",
+          "nevra": "xoa-proxy-0.1.2.1-65.g510e2bb.static.x86_64",
+          "sha256": "b0c90031adba5471fa2b7f4b4f3d34723cb69f30a67c472acc0b00a1af079df3"
+        }
+      ],
+      "release_id": 400353344,
+      "tag": "v0.1.2.1",
+      "commit": "510e2bb411ba2ada2e49fad04b17bb485b5ccb83",
+      "basis": "legacy-baseline",
+      "status": "stable",
+      "note": "served by stable at cutover (2026-10-01); not QA-approved by this gate"
+    },
+    {
+      "assets": [
+        {
+          "name": "xoa-proxy-0.1.2-64.gd0e165b.static.x86_64.rpm",
+          "nevra": "xoa-proxy-0.1.2-64.gd0e165b.static.x86_64",
+          "sha256": "0ba2db95505bbd47e5b86deee06938ab2fb1bdbe97e147fc119d2ca2fc2e3d53"
+        }
+      ],
+      "release_id": 399441873,
+      "tag": "v0.1.2",
+      "commit": "d0e165bf2a7c5757b38c56cc2ed3e8367f7aca46",
+      "basis": "legacy-baseline",
+      "status": "stable",
+      "note": "served by stable at cutover (2026-10-01); not QA-approved by this gate"
+    },
+    {
+      "assets": [
+        {
+          "name": "xoa-proxy-0.1.1.16-63.g818068d.static.x86_64.rpm",
+          "nevra": "xoa-proxy-0.1.1.16-63.g818068d.static.x86_64",
+          "sha256": "7763615173d31d3669a4b223269511cdeb7e7c46d288843316a86a5773728189"
+        }
+      ],
+      "release_id": 399207672,
+      "tag": "v0.1.1.16",
+      "commit": "818068d399048a1494e284bd195bdfc951a17f43",
+      "basis": "legacy-baseline",
+      "status": "stable",
+      "note": "served by stable at cutover (2026-10-01); not QA-approved by this gate"
+    },
+    {
+      "assets": [
+        {
+          "name": "xoa-proxy-0.1.1.15-62.gef4634e.static.x86_64.rpm",
+          "nevra": "xoa-proxy-0.1.1.15-62.gef4634e.static.x86_64",
+          "sha256": "6d76c043176ef98d90cdaceb793a9d6a33e3a9ca71a061df2775291bb135a1d1"
+        }
+      ],
+      "release_id": 399100294,
+      "tag": "v0.1.1.15",
+      "commit": "ef4634ee75783301097155bdfaf8d8672bbe5c57",
+      "basis": "legacy-baseline",
+      "status": "stable",
+      "note": "served by stable at cutover (2026-10-01); not QA-approved by this gate"
+    },
+    {
+      "assets": [
+        {
+          "name": "xoa-proxy-0.1.1.14-61.gd4df610.static.x86_64.rpm",
+          "nevra": "xoa-proxy-0.1.1.14-61.gd4df610.static.x86_64",
+          "sha256": "563783183f05fd69ba8bc2f8824a42b70ecc9f07a3d5af53e81f272a6404a166"
+        }
+      ],
+      "release_id": 397359684,
+      "tag": "v0.1.1.14",
+      "commit": "d4df6107928d9b49fe15a5bd8689c12432348179",
+      "basis": "legacy-baseline",
+      "status": "stable",
+      "note": "served by stable at cutover (2026-10-01); not QA-approved by this gate"
+    }
+  ]
+}
