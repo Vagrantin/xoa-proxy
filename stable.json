@@ -1,8 +1,8 @@
 {
   "stream": "xoa-proxy",
-  "generation": 3,
-  "latest": "v0.1.2.3",
-  "updated_at": "2026-10-06T13:01:16Z",
+  "generation": 4,
+  "latest": "v0.1.2.2",
+  "updated_at": "2026-10-06T13:31:15Z",
   "entries": [
     {
       "tag": "v0.1.2.3",
@@ -16,7 +16,7 @@
         }
       ],
       "basis": "promoted",
-      "status": "stable",
+      "status": "withdrawn",
       "qa": {
         "record_sha256": "d7809455222b359697700831e719950fc34c8b81c3f772b488e722656b88e4ec",
         "attempt": 0,
@@ -41,6 +41,11 @@
         "by": "admin",
         "at": "2026-10-06T13:01:16Z",
         "proposal_sha256": "1cad0d9d411f755df6f905b587bfacc2c0a64e325954bf6c860dc5dd770545d5"
+      },
+      "withdrawn": {
+        "at": "2026-10-06T13:31:15Z",
+        "by": "admin",
+        "reason": "rehearsal xcp-hl#154"
       }
     },
     {
