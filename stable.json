@@ -1,9 +1,56 @@
 {
   "stream": "xoa-proxy",
-  "generation": 4,
-  "latest": "v0.1.2.2",
-  "updated_at": "2026-10-06T13:31:15Z",
+  "generation": 5,
+  "latest": "v0.1.2.4",
+  "updated_at": "2026-10-07T02:45:35Z",
   "entries": [
+    {
+      "tag": "v0.1.2.4",
+      "release_id": 405051664,
+      "commit": "c3a2b381284303719870ea2d7c14b954d288c453",
+      "assets": [
+        {
+          "name": "xoa-proxy-0.1.2.4-68.gc3a2b38.static.x86_64.rpm",
+          "sha256": "b003d6dffeb385197c3d5b07d9c307e93282b6653d9e41e0211e2129e8d85b75",
+          "nevra": "xoa-proxy-0.1.2.4-68.gc3a2b38.static.x86_64"
+        }
+      ],
+      "basis": "promoted",
+      "status": "stable",
+      "qa": {
+        "record_sha256": "f59b611b7a52fb6bb2e73f3995ddae073f2102b10a71228a8a01a978392b9d5b",
+        "attempt": 1,
+        "passed_at": "2026-10-06T23:42:07Z",
+        "policy_sha256": "6fc2ee21a76a760e1f823e60366e3cd222fad36f3f5bfb59b026c3a3ae2194cd",
+        "coverage": {
+          "iso": "v8.3-ce44",
+          "iso_attempt": 2,
+          "at": "2026-10-07T01:56:03Z",
+          "nevra": "xoa-proxy-0.1.2.4-68.gc3a2b38.static.x86_64",
+          "sigmd5": "53b1cca9cd3dc585189eb19b2c6c257d",
+          "sha1header": "6addb61522e7bcfdcf8664a6874500f331faf0e1",
+          "rpm_verify": "clean",
+          "compatible_set": [
+            "xo-lite-ce-0.21.0-27.g4e319cd.xcpng8.3.noarch",
+            "xoa-proxy-0.1.2.4-68.gc3a2b38.static.x86_64",
+            "xcp-hl-release-0.0.4-4.gce1c74a.xcpng8.3.noarch"
+          ]
+        }
+      },
+      "approval": {
+        "by": "admin",
+        "at": "2026-10-07T02:45:35Z",
+        "proposal_sha256": "30d3a564d401a8c7e94e90027be9a5048577bba3f5febdb08b20092fb8b2376a"
+      },
+      "advisory": {
+        "id": "XCPHL-xoa-proxy-v0.1.2.4",
+        "type": "bugfix",
+        "severity": "None",
+        "summary": "Fix-forward rehearsal (xcp-hl#154): v0.1.2.4 replaces v0.1.2.2, same code",
+        "cves": [],
+        "issued": "2026-10-07T02:45:35Z"
+      }
+    },
     {
       "tag": "v0.1.2.3",
       "release_id": 401735830,
@@ -60,7 +107,7 @@
         }
       ],
       "basis": "promoted",
-      "status": "stable",
+      "status": "superseded",
       "qa": {
         "record_sha256": "7d10dab876e1ebe3b8041d53c78b2588c7a5bfccf926bdb9db28bbf64c9bf763",
         "attempt": 0,
@@ -85,6 +132,13 @@
         "by": "admin",
         "at": "2026-10-01T09:17:12Z",
         "proposal_sha256": "13e3d2da6736647a1cbbf96ef614f5ce8b6000e2fc5022e87e110185f8a5cdfa"
+      },
+      "retain_until": "2026-11-06T02:45:35Z",
+      "superseded": {
+        "by": "v0.1.2.4",
+        "at": "2026-10-07T02:45:35Z",
+        "advisory_id": "XCPHL-xoa-proxy-v0.1.2.4",
+        "reason": "Fix-forward rehearsal (xcp-hl#154): v0.1.2.4 replaces v0.1.2.2, same code"
       }
     },
     {
@@ -114,8 +168,15 @@
       "tag": "v0.1.2",
       "commit": "d0e165bf2a7c5757b38c56cc2ed3e8367f7aca46",
       "basis": "legacy-baseline",
-      "status": "stable",
-      "note": "served by stable at cutover (2026-10-01); not QA-approved by this gate"
+      "status": "superseded",
+      "note": "served by stable at cutover (2026-10-01); not QA-approved by this gate",
+      "retain_until": "2026-11-06T02:45:35Z",
+      "superseded": {
+        "by": "v0.1.2.4",
+        "at": "2026-10-07T02:45:35Z",
+        "advisory_id": "XCPHL-xoa-proxy-v0.1.2.4",
+        "reason": "Fix-forward rehearsal (xcp-hl#154): v0.1.2.4 replaces v0.1.2.2, same code"
+      }
     },
     {
       "assets": [
