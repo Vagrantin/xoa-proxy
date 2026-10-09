@@ -1,6 +1,6 @@
 [xcp-hl-xoa-proxy]
 name=XCP-HL - XOA deploy proxy
-baseurl=https://vagrantin.github.io/xoa-proxy/8.3/x86_64/
+baseurl=https://rpm.xcp-hl.org/xoa-proxy/8.3/x86_64/
 enabled=1
 # Package signatures are made by a GPG signing subkey, which rpm 4.11 on
 # XCP-ng 8.3 dom0 (CentOS 7) cannot verify: it registers only the primary key
@@ -10,5 +10,5 @@ enabled=1
 # model apt uses, where the release file is signed and packages are not.
 gpgcheck=0
 repo_gpgcheck=1
-gpgkey=https://vagrantin.github.io/xoa-proxy/xcp-ng-ce-public.asc
+gpgkey=https://rpm.xcp-hl.org/xcp-ng-ce-public.asc
 skip_if_unavailable=False
