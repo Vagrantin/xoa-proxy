@@ -1,9 +1,35 @@
 {
   "stream": "xoa-proxy",
-  "generation": 5,
-  "latest": "v0.1.2.4",
-  "updated_at": "2026-10-07T02:45:35Z",
+  "generation": 6,
+  "latest": "v0.1.2.5",
+  "updated_at": "2026-10-14T06:31:51Z",
   "entries": [
+    {
+      "tag": "v0.1.2.5",
+      "release_id": 407853907,
+      "commit": "f02254acc154ab8732cb4fedea1dba28d813b105",
+      "assets": [
+        {
+          "name": "xoa-proxy-0.1.2.5-69.gf02254a.static.x86_64.rpm",
+          "sha256": "70281beb459f79631d090b312bad2523ecedfe01eae3e8405ea6eda48f878995",
+          "nevra": "xoa-proxy-0.1.2.5-69.gf02254a.static.x86_64"
+        }
+      ],
+      "basis": "promoted",
+      "status": "stable",
+      "qa": {
+        "record_sha256": "bf379a236f2ad589d9ef8ab6998ad28fe9e495f635cd6b8db886403c11111ce4",
+        "attempt": 1,
+        "passed_at": "2026-10-09T11:48:04Z",
+        "policy_sha256": "23f9278ea8454c71c50d07141e7def853783eec7c2256204a68916bf42da1037",
+        "coverage": null
+      },
+      "approval": {
+        "by": "admin",
+        "at": "2026-10-14T06:31:51Z",
+        "proposal_sha256": "605531f00801145e47a138e877141d101473fb67eae3b64386a2d6e564251830"
+      }
+    },
     {
       "tag": "v0.1.2.4",
       "release_id": 405051664,
