@@ -16,8 +16,6 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-unknown-linux-musl
@@ -25,20 +23,3 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
       - run: cargo build --release
-      - name: Compare musl release build against the PR base
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set -euo pipefail
-          target=x86_64-unknown-linux-musl
-          current_packages=$(cargo tree --edges normal --target "$target" --prefix none | sort -u | wc -l)
-          current_bytes=$(stat -c %s "target/$target/release/xoa-proxy")
-          git worktree add --detach "$RUNNER_TEMP/xoa-proxy-base" "$BASE_SHA"
-          (
-            cd "$RUNNER_TEMP/xoa-proxy-base"
-            cargo build --release
-          )
-          baseline_packages=$(cd "$RUNNER_TEMP/xoa-proxy-base" && cargo tree --edges normal --target "$target" --prefix none | sort -u | wc -l)
-          baseline_bytes=$(stat -c %s "$RUNNER_TEMP/xoa-proxy-base/target/$target/release/xoa-proxy")
-          echo "base packages=$baseline_packages bytes=$baseline_bytes"
-          echo "PR   packages=$current_packages bytes=$current_bytes"
