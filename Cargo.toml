@@ -14,7 +14,9 @@ path = "src/main.rs"
 
 [dependencies]
 # Async runtime
-tokio = { version = "1", features = ["full"] }
+# Only the runtime, TCP listener, shutdown signals, stream I/O and mutex used
+# by the proxy. `full` also enables unused fs/process/stdio features.
+tokio = { version = "1", default-features = false, features = ["macros", "rt-multi-thread", "net", "signal", "sync", "io-util"] }
 
 # HTTP server
 axum = "0.7"
@@ -48,7 +50,7 @@ url = "2.5.8"
 wiremock       = "0.6"
 flate2         = "1"
 tower          = { version = "0.4", features = ["util"] }
-tokio          = { version = "1",   features = ["full", "test-util"] }
+tokio          = { version = "1", default-features = false, features = ["macros", "rt-multi-thread", "net", "signal", "sync", "io-util", "time", "test-util"] }
 http           = "1"
 http-body-util = "0.1"
 
