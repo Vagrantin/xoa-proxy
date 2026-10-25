@@ -34,7 +34,7 @@ async-compression = { version = "0.4", features = ["tokio", "gzip"] }
 # Adapter: reqwest bytes_stream ↔ AsyncRead, AsyncRead ↔ Stream<Bytes>
 tokio-util = { version = "0.7", features = ["io"] }
 # Stream traits/adapters do not need the bundled futures executor.
-futures = { version = "0.3", default-features = false, features = ["std"] }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
 bytes = "1"
 
 # Deserialize for axum Query extractor in handler.rs
