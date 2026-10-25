@@ -2,7 +2,7 @@ Name:    xoa-proxy
 Version: %{pkg_version}
 Release: %{_release}.g%{_shortcommit}.static
 Summary: Community XOA deployment proxy for XCP-ng
-License: GPLv3
+License:        AGPL-3.0-only
 BuildArch: x86_64
 
 %define _binary_payload w2.xzdio
@@ -14,6 +14,8 @@ Source3: 83-xoa-proxy.preset
 
 Requires: systemd
 
+Source4: LICENSE
+
 %description
 Lightweight HTTP proxy that serves the community XVA image for XO Lite deployment.
 
@@ -24,6 +26,7 @@ Lightweight HTTP proxy that serves the community XVA image for XO Lite deploymen
 # binary already compiled by CI
 
 %install
+install -D -m 644 %{SOURCE4} %{buildroot}%{_licensedir}/%{name}/LICENSE
 install -D -m 755 %{SOURCE0} \
     %{buildroot}/opt/xensource/bin/xoa-proxy
 install -D -m 644 %{SOURCE1} \
@@ -60,6 +63,7 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %files
+%license %{_licensedir}/%{name}/LICENSE
 /opt/xensource/bin/xoa-proxy
 /usr/lib/systemd/system/xoa-proxy.service
 %config(noreplace) /etc/logrotate.d/xoa-proxy
