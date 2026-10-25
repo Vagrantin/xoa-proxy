@@ -1987,7 +1987,7 @@ dependencies = [
  "axum",
  "bytes",
  "flate2",
- "futures",
+ "futures-util",
  "http",
  "http-body-util",
  "reqwest",

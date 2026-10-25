@@ -39,7 +39,7 @@ use std::{
 use anyhow::{Context as AnyhowContext, Result};
 use async_compression::tokio::bufread::GzipDecoder;
 use bytes::Bytes;
-use futures::{Stream, StreamExt, TryStreamExt};
+use futures_util::{Stream, StreamExt, TryStreamExt};
 use tokio::io::BufReader;
 use tokio::sync::OwnedMutexGuard;
 use tokio_util::io::{ReaderStream, StreamReader};
