@@ -51,7 +51,7 @@ def free_port():
 
 
 def ctl(*args, check=True):
-    return subprocess.run(['systemctl', *args], check=check, text=True, capture_output=True).stdout.strip()
+    return subprocess.run(['systemctl', *args], check=check, text=True, capture_output=True, timeout=30).stdout.strip()
 
 
 def wait_for(predicate, seconds=15):
@@ -196,10 +196,12 @@ try:
     # daemon while its transfer is still active, then remove the socket package.
     ctl('stop', unit + '.socket', unit + '.service')
     shutil.copy2(baseline, old_binary)
-    old_service = (root / 'baseline/packaging/xoa-proxy.service').read_text().replace('/opt/xensource/bin/xoa-proxy', str(old_binary)).replace('[Service]', f'[Service]\nEnvironment=XOA_PROXY_PORT={port}')
+    # Frozen packaging from abc98c7 keeps the legacy migration test meaningful
+    # after the PR base itself starts shipping socket activation.
+    old_service = (root / 'ci/fixtures/xoa-proxy-0.1.2.service').read_text().replace('/opt/xensource/bin/xoa-proxy', str(old_binary)).replace('[Service]', f'[Service]\nEnvironment=XOA_PROXY_PORT={port}')
     (unit_dir / (unit + '.service')).write_text(old_service)
     ctl('daemon-reload')
-    ctl('enable', '--runtime', unit + '.service')
+    ctl('enable', unit + '.service')
     ctl('start', unit + '.service')
     # Ensure the old listener is ready before beginning the upgrade transfer.
     wait_for(lambda: old_ready(port))
@@ -222,7 +224,7 @@ try:
         subprocess.run(['sh', '-c', body, 'rpm-scriptlet', str(arg)], check=True)
 
     scriptlet(root / 'SPECS/xoa-proxy.spec', 'post', 2)
-    scriptlet(root / 'baseline/SPECS/xoa-proxy.spec', 'postun', 1)
+    scriptlet(root / 'ci/fixtures/xoa-proxy-0.1.2.spec', 'postun', 1)
     transfer.join(timeout=15)
     assert not transfer.is_alive() and not failures, failures
     assert ctl('is-enabled', unit + '.socket') == 'enabled'
@@ -254,7 +256,7 @@ try:
         for phase, result in phases.items():
             if isinstance(result, dict):
                 rows.append(f"| {version} / {phase} | {result['peak_sampled_rss_kib']} | {result['cpu_seconds']:.3f} | {result['cpu_percent_one_core']} | {result['seconds']} | {result['threads']} |")
-    rows += ['', 'Synthetic 16 MiB raw/gzip transfers with a throttled local upstream. CPU from /proc; RSS sampled at 50 ms. Not real XCP-ng measurements. Socket/kernel/systemd overhead excluded from process figures.', '', 'Lifecycle: cold idle, first activation, long raw/gzip imports, idle exit, reactivation, disconnect recovery, active-import RPM upgrade migration, removal, standalone and malformed activation passed.']
+    rows += ['', 'Synthetic 16 MiB raw/gzip transfers with a throttled local upstream. The PR base runs standalone to measure its resident process; the candidate uses the shipped socket unit. CPU from /proc; RSS sampled at 50 ms. Not real XCP-ng measurements. Socket/kernel/systemd overhead excluded from process figures.', '', 'Lifecycle: cold idle, first activation, long raw/gzip imports, idle exit, reactivation, disconnect recovery, active-import RPM upgrade migration, removal, standalone and malformed activation passed.']
     (output / 'summary.md').write_text('\n'.join(rows) + '\n')
 finally:
     (output / 'journal.txt').write_text(subprocess.run(['journalctl', '-u', unit + '.service', '-u', unit + '.socket', '--no-pager'], text=True, capture_output=True).stdout)

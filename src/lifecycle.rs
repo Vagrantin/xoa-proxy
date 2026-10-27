@@ -133,6 +133,33 @@ mod tests {
     use tower::ServiceExt;
 
     #[tokio::test(start_paused = true)]
+    async fn pending_handler_is_active_and_cancellation_releases_it() {
+        let activity = Activity::default();
+        let app = axum::Router::new()
+            .route(
+                "/",
+                axum::routing::get(|| std::future::pending::<&'static str>()),
+            )
+            .layer(axum::middleware::from_fn_with_state(
+                activity.clone(),
+                track,
+            ));
+        let request = tokio::spawn(app.oneshot(Request::new(Body::empty())));
+        tokio::task::yield_now().await;
+        let idle_activity = activity.clone();
+        let idle = tokio::spawn(async move { idle_activity.idle(Duration::from_secs(60)).await });
+        tokio::time::sleep(Duration::from_secs(120)).await;
+        assert!(!idle.is_finished());
+        request.abort();
+        assert!(request.await.unwrap_err().is_cancelled());
+        tokio::task::yield_now().await;
+        tokio::time::sleep(Duration::from_secs(59)).await;
+        assert!(!idle.is_finished());
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        idle.await.unwrap();
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn response_body_lifetime_is_active_even_after_handler_returns() {
         let activity = Activity::default();
         let app = axum::Router::new()
