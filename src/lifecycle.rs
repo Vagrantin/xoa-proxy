@@ -138,7 +138,7 @@ mod tests {
         let app = axum::Router::new()
             .route(
                 "/",
-                axum::routing::get(|| std::future::pending::<&'static str>()),
+                axum::routing::get(std::future::pending::<&'static str>),
             )
             .layer(axum::middleware::from_fn_with_state(
                 activity.clone(),
