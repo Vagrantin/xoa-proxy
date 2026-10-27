@@ -22,12 +22,26 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-unknown-linux-musl
-      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools rpm
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
       - run: cargo fmt --all -- --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo build --release
+      - name: Verify RPM contents and scriptlets without publishing
+        run: |
+          topdir="$RUNNER_TEMP/rpmbuild"
+          mkdir -p "$topdir"/{SOURCES,SPECS,BUILD,BUILDROOT,RPMS,SRPMS}
+          cp target/x86_64-unknown-linux-musl/release/xoa-proxy "$topdir/SOURCES/"
+          cp LICENSE packaging/xoa-proxy.{service,socket,logrotate} packaging/83-xoa-proxy.preset "$topdir/SOURCES/"
+          rpmbuild -bb SPECS/xoa-proxy.spec --define "_topdir $topdir" \
+            --define 'pkg_version 0.1.3' --define '_release 1' --define '_shortcommit ci'
+          rpm_file=$(find "$topdir/RPMS" -name '*.rpm' -print -quit)
+          test "$(rpm -qp --qf '%{PAYLOADCOMPRESSOR}' "$rpm_file")" = xz
+          rpm -qpl "$rpm_file" | grep -Fx /usr/lib/systemd/system/xoa-proxy.socket
+          for script in POSTIN PREUN POSTUN; do
+            rpm -qp --qf "%{$script}" "$rpm_file" | sh -n
+          done
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.base.sha }}

@@ -4,7 +4,6 @@ use std::{
     env,
     os::fd::FromRawFd,
     pin::Pin,
-    sync::Arc,
     task::{Context, Poll},
     time::Duration,
 };
@@ -42,24 +41,28 @@ pub async fn listener(bind: &str, port: u16) -> Result<(tokio::net::TcpListener,
 }
 
 #[derive(Clone)]
-pub struct Activity(Arc<watch::Sender<usize>>);
+pub struct Activity {
+    active: watch::Sender<usize>,
+}
 
 impl Default for Activity {
     fn default() -> Self {
-        Self(Arc::new(watch::channel(0).0))
+        Self {
+            active: watch::channel(0).0,
+        }
     }
 }
 
 impl Activity {
     fn enter(&self) -> ActiveRequest {
-        self.0.send_modify(|active| *active += 1);
+        self.active.send_modify(|active| *active += 1);
         ActiveRequest(self.clone())
     }
 
     /// A fresh idle window starts after the last body is completed or dropped.
     /// There is no periodic polling while the proxy is streaming an import.
     pub async fn idle(&self, timeout: Duration) {
-        let mut changes = self.0.subscribe();
+        let mut changes = self.active.subscribe();
         loop {
             let active = *changes.borrow_and_update();
             if active == 0 {
@@ -80,7 +83,7 @@ struct ActiveRequest(Activity);
 
 impl Drop for ActiveRequest {
     fn drop(&mut self) {
-        self.0.0.send_modify(|active| *active -= 1);
+        self.0.active.send_modify(|active| *active -= 1);
     }
 }
 
@@ -134,7 +137,10 @@ mod tests {
         let activity = Activity::default();
         let app = axum::Router::new()
             .route("/", axum::routing::get(|| async { "image bytes" }))
-            .layer(axum::middleware::from_fn_with_state(activity.clone(), track));
+            .layer(axum::middleware::from_fn_with_state(
+                activity.clone(),
+                track,
+            ));
         let response = app.oneshot(Request::new(Body::empty())).await.unwrap();
         assert_eq!(response.body().size_hint().exact(), Some(11));
         let idle_activity = activity.clone();
