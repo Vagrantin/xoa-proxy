@@ -18,7 +18,8 @@ The XO Lite frontend always builds the same proxy URL regardless of source schem
 
 ```
 src/main.rs   , entry point, logging, router assembly, graceful shutdown
-src/config.rs , CLI / env-var configuration (clap derive)
+src/config.rs , environment configuration
+src/lifecycle.rs, systemd socket activation and idle lifetime tracking
 src/state.rs  , shared AppState (two HTTP clients + import lock)
 src/stream.rs , fetch pipeline, GuardedStream RAII type, ImageFormat enum
 src/handler.rs, axum route handlers (/image.xva, fallback)
@@ -30,10 +31,66 @@ Stack: tokio + axum (server), reqwest with rustls only, no OpenSSL dependency, d
 
 ## Build & test
 
+Builds run in GitHub Actions: `.github/workflows/xoa-proxy.yml` produces the
+static musl RPM; `.github/workflows/check-rust.yml` runs Rust checks, real systemd
+socket lifecycle tests and a before/after CPU/RSS benchmark for PRs. The benchmark
+is uploaded as `proxy-resources` and summarized in the workflow run. It uses a
+synthetic upstream and is not a measurement of a real XCP-ng import.
+
+## On-demand operation (0.1.3 and later)
+
+The RPM enables and starts `xoa-proxy.socket` on `127.0.0.1:9001`. There is no
+proxy process at boot. The first TCP connection starts `xoa-proxy.service` with
+systemd's inherited listener; queued connections wait for startup. The endpoint
+and XO Lite CE deployment flow stay the same.
+
+The proxy exits successfully after 60 seconds with no active requests. This idle
+window starts after the last response body is completed or dropped, including
+failed or cancelled imports. HEAD probes and upstream connection setup also count
+as active work. Graceful shutdown drains accepted connections; it never applies a
+fixed time limit to an active import. The socket remains listening for the next
+deployment. A single-thread async runtime avoids allocating workers per host CPU.
+
+`systemctl is-active xoa-proxy.socket` should report `active`. An `inactive`
+`xoa-proxy.service` is normal between deployments. To stop deployment access, stop
+**both** the socket and service; stopping only the service leaves activation enabled:
+
 ```bash
-cargo build --release
-cargo test
+systemctl stop xoa-proxy.socket xoa-proxy.service
+systemctl start xoa-proxy.socket
 ```
+
+Upgrades disable the old service's boot enablement and enable the socket. If the
+old service is running, its package restart drains the current import before the
+socket takes over. Removal stops and disables both units. Local service overrides
+should be reviewed before upgrading this alpha release.
+
+Set `XOA_PROXY_IDLE_SECONDS` in a service drop-in to a positive number of seconds
+(default 60). Change the address/port with a socket drop-in (`ListenStream=` to
+clear the old value, then `ListenStream=127.0.0.1:<port>`); stop both units before
+restarting the socket. In socket mode `XOA_PROXY_BIND` and `XOA_PROXY_PORT` do not
+change systemd's listener. Direct execution without activation metadata retains
+standalone binding via those variables and stays running until signalled.
+
+### Measuring an installed host
+
+Record the package version, host model, image size/format, network speed and
+upstream URL for each run. Before and after an actual XO Lite import, capture:
+
+```bash
+rpm -q xoa-proxy
+systemctl show xoa-proxy.socket -p ActiveState
+systemctl show xoa-proxy.service -p ActiveState -p MainPID
+ps -C xoa-proxy -o pid,rss,vsz,nlwp,time,pcpu
+```
+
+Sample the same process during import with `pidstat -r -u -p <MainPID> 1` if
+sysstat is installed. Compare raw and gzip imports with the previous RPM under
+the same conditions. Verify the imported VM boots and that the proxy disappears
+60 seconds after completion/cancellation, then repeat deployment to verify
+reactivation. No PID means **zero proxy-process RSS/CPU**; systemd and the kernel
+listening socket still have a small cost. Actual dom0 measurements remain a
+release validation step; CI numbers must not be presented as appliance results.
 
 ## Packaging
 

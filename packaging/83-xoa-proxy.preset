@@ -1,1 +1,2 @@
-enable xoa-proxy.service
+enable xoa-proxy.socket
+disable xoa-proxy.service

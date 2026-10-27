@@ -21,7 +21,7 @@
 //! # Module layout
 //! ```
 //! main.rs    : entry point, logging, router assembly, graceful shutdown
-//! config.rs  : CLI / env-var configuration (clap derive)
+//! config.rs  : environment configuration
 //! state.rs   : shared AppState (two HTTP clients + import lock)
 //! stream.rs  : fetch pipeline; GuardedStream RAII type; ImageFormat enum
 //! handler.rs : axum route handlers (/image.xva, fallback)
@@ -37,11 +37,17 @@ use tracing::info;
 use tracing_subscriber::fmt::time::ChronoLocal;
 use tracing_subscriber::EnvFilter;
 
-use xoa_proxy_lib::{build_router, config::Config, state::AppState, stream::build_client};
+use xoa_proxy_lib::{
+    build_router,
+    config::Config,
+    lifecycle::{self, Activity},
+    state::AppState,
+    stream::build_client,
+};
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     // ── Logging ────────────────────────────────────────────────────────────
     let log_file = OpenOptions::new()
@@ -79,11 +85,15 @@ async fn main() -> Result<()> {
     };
 
     // ── Router ─────────────────────────────────────────────────────────────
-    let app = build_router(state);
+    let activity = Activity::default();
+    let app = build_router(state).layer(axum::middleware::from_fn_with_state(
+        activity.clone(),
+        lifecycle::track,
+    ));
 
     // ── Listen ─────────────────────────────────────────────────────────────
-    let addr = format!("{}:{}", config.bind, config.port);
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
+    let (listener, activated) = lifecycle::listener(&config.bind, config.port).await?;
+    let addr = listener.local_addr()?;
 
     info!(
         "Listening on http://{}/image.xva?src=<url>[&verify_ssl=false]",
@@ -92,7 +102,18 @@ async fn main() -> Result<()> {
 
     // ── Serve ──────────────────────────────────────────────────────────────
     axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
+        .with_graceful_shutdown(async move {
+            if activated {
+                tokio::select! {
+                    _ = shutdown_signal() => {},
+                    _ = activity.idle(config.idle_timeout) => {
+                        info!("Idle timeout — exiting; systemd socket remains available");
+                    }
+                }
+            } else {
+                shutdown_signal().await;
+            }
+        })
         .await?;
 
     Ok(())

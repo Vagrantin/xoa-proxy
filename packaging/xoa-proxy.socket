@@ -1,0 +1,11 @@
+[Unit]
+Description=XOA Deploy Proxy activation socket
+Documentation=https://github.com/Vagrantin/xoa-proxy
+
+[Socket]
+ListenStream=127.0.0.1:9001
+Accept=no
+NoDelay=true
+
+[Install]
+WantedBy=sockets.target

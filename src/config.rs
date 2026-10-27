@@ -3,6 +3,7 @@
 //! Variables:
 //! - XOA_PROXY_PORT: TCP port to listen on (default: 9001)
 //! - XOA_PROXY_BIND: Address to bind to (default: 127.0.0.1)
+//! - XOA_PROXY_IDLE_SECONDS: idle exit delay in socket mode (default: 60, minimum: 1)
 
 use std::env;
 
@@ -10,6 +11,7 @@ use std::env;
 pub struct Config {
     pub port: u16,
     pub bind: String,
+    pub idle_timeout: std::time::Duration,
 }
 
 impl Config {
@@ -22,6 +24,16 @@ impl Config {
 
         let bind = env::var("XOA_PROXY_BIND").unwrap_or_else(|_| "127.0.0.1".to_string());
 
-        Self { port, bind }
+        let idle_seconds = env::var("XOA_PROXY_IDLE_SECONDS")
+            .ok()
+            .and_then(|s| s.parse::<u64>().ok())
+            .filter(|s| *s > 0)
+            .unwrap_or(60);
+
+        Self {
+            port,
+            bind,
+            idle_timeout: std::time::Duration::from_secs(idle_seconds),
+        }
     }
 }

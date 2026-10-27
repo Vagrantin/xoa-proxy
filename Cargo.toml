@@ -1,6 +1,6 @@
 [package]
 name = "xoa-proxy"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 description = "XOA Deploy Proxy — HTTPS+gunzip bridge for XAPI VM.import"
 
@@ -16,7 +16,7 @@ path = "src/main.rs"
 # Async runtime
 # Only the runtime, TCP listener, shutdown signals, stream I/O and mutex used
 # by the proxy. `full` also enables unused fs/process/stdio features.
-tokio = { version = "1", default-features = false, features = ["macros", "rt-multi-thread", "net", "signal", "sync", "io-util"] }
+tokio = { version = "1", default-features = false, features = ["macros", "rt", "net", "signal", "sync", "io-util", "time"] }
 
 # HTTP server
 # The service only exposes a GET route with Query and serves HTTP/1.
@@ -36,6 +36,7 @@ tokio-util = { version = "0.7", features = ["io"] }
 # Stream traits/adapters do not need the bundled futures executor.
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 bytes = "1"
+http-body = "1"
 
 # Deserialize for axum Query extractor in handler.rs
 serde = { version = "1", features = ["derive"] }
