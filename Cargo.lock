@@ -1916,7 +1916,7 @@ checksum = "1ffae5123b2d3fc086436f8834ae3ab053a283cfac8fe0a0b8eaae044768a4c4"
 
 [[package]]
 name = "xoa-proxy"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "async-compression",
@@ -1925,6 +1925,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "http",
+ "http-body",
  "http-body-util",
  "reqwest",
  "serde",

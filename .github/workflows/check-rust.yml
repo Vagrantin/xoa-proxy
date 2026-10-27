@@ -7,6 +7,9 @@ on:
       - 'Cargo.lock'
       - 'src/**'
       - 'tests/**'
+      - 'packaging/**'
+      - 'SPECS/**'
+      - 'ci/**'
       - '.github/workflows/check-rust.yml'
 
 jobs:
@@ -22,4 +25,25 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y musl-tools
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo build --release
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: baseline
+      - name: Build baseline with the same toolchain and target
+        run: |
+          CARGO_TARGET_DIR="$GITHUB_WORKSPACE/baseline-target" cargo build --release --locked --manifest-path baseline/Cargo.toml
+      - name: Test systemd socket lifecycle and measure resource usage
+        run: |
+          sudo python3 ci/socket-lifecycle.py \
+            baseline-target/x86_64-unknown-linux-musl/release/xoa-proxy \
+            target/x86_64-unknown-linux-musl/release/xoa-proxy \
+            resource-results
+          cat resource-results/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: proxy-resources
+          path: resource-results/

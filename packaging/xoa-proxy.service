@@ -4,24 +4,22 @@ Documentation=https://github.com/vagrantin/xoa-proxy
 # Start after the network is up
 After=network-online.target
 Wants=network-online.target
+Requires=xoa-proxy.socket
+After=xoa-proxy.socket
 
 [Service]
 Type=simple
 ExecStart=/opt/xensource/bin/xoa-proxy
 Restart=on-failure
 RestartSec=5s
+# Graceful shutdown must not kill an active XVA import after the default 90s.
+TimeoutStopSec=infinity
 
 # ── Configuration ────────────────────────────────────────────────────────
-# Certificate verification is ON by default.
-#
-# If your XOA image is hosted behind a self-signed certificate, choose ONE of:
-#
-#Option A — CLI flag (edit ExecStart above):
-#  ExecStart=/opt/xensource/bin/xoa-proxy --no-verify-ssl
-#
-#Option B — Environment variable
-#  Environment=XOA_PROXY_VERIFY_SSL=0
-#
+# Certificate verification is selected per request with ?verify_ssl=false.
+# Exit 60 seconds after all requests/streams finish; the socket stays listening.
+Environment=XOA_PROXY_IDLE_SECONDS=60
+# Change the bind address/port in xoa-proxy.socket, not in this service.
 
 # ── Logging ─────────────────────────────────────────────────────────────────
 StandardOutput=null
@@ -30,7 +28,7 @@ SyslogIdentifier=xoa-proxy
 
 # ── Minimal privilege hardening ──────────────────────────────────────────────
 # The proxy only needs outbound HTTPS and to listen on a loopback port > 1024.
-# No filesystem writes, no setuid, no new privileges.
+# The only filesystem write is /var/log/xoa-proxy.log.
 NoNewPrivileges=yes
 PrivateTmp=yes
 
@@ -41,6 +39,3 @@ ProtectHome=yes
 # Bind only to loopback.
 RestrictAddressFamilies=AF_INET AF_INET6
 AmbientCapabilities=
-
-[Install]
-WantedBy=multi-user.target

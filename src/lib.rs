@@ -1,6 +1,7 @@
 pub mod config;
 pub mod error;
 pub mod handler;
+pub mod lifecycle;
 pub mod state;
 pub mod stream;
 
