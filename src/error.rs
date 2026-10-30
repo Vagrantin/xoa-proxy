@@ -51,8 +51,8 @@ impl IntoResponse for ProxyError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::http::StatusCode;
     use axum::response::IntoResponse;
-    use http::StatusCode;
 
     /// Helper: convert a ProxyError into a response and return just the status code.
     fn status(e: ProxyError) -> StatusCode {
